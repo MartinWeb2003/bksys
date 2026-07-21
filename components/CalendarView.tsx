@@ -144,8 +144,8 @@ export default function CalendarView({
   }
 
   return (
-    <div>
-      <div className="sticky top-0 z-30 bg-stone-100 flex flex-wrap items-center gap-2 mb-3 pt-1 pb-2">
+    <div className="flex flex-col h-[calc(100vh-7rem)]">
+      <div className="flex-none flex flex-wrap items-center gap-2 mb-3">
         <div className="flex gap-1.5">
           <button onClick={() => setStart(addDays(start, -7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.prevWeek}
@@ -162,7 +162,7 @@ export default function CalendarView({
         </div>
       </div>
 
-      <div className="overflow-auto border border-stone-200 rounded-lg bg-white max-h-[calc(100vh-9rem)]">
+      <div className="flex-1 min-h-0 self-start max-w-full overflow-auto border border-stone-200 rounded-lg bg-white">
           <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
             <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
               {/* header */}
@@ -248,7 +248,7 @@ export default function CalendarView({
       </div>
 
       {/* status legend at the bottom so the calendar can use full width */}
-      <div className="mt-3 border border-stone-200 rounded-lg bg-white p-3">
+      <div className="flex-none mt-3 border border-stone-200 rounded-lg bg-white p-3">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">{L.legendTitle}</div>
         <ul className="flex flex-row flex-wrap gap-x-6 gap-y-2">
           {statusMeta(L).map((m) => (
@@ -262,7 +262,7 @@ export default function CalendarView({
           ))}
         </ul>
       </div>
-      <p className="mt-2 text-xs text-stone-400">{L.calHelp}</p>
+      <p className="flex-none mt-2 text-xs text-stone-400">{L.calHelp}</p>
     </div>
   );
 }
