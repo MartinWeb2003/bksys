@@ -64,20 +64,28 @@ model Parcel {
   @@index([typeId])
 }
 
+enum BookingStatus {
+  PAID // green  — paid for
+  HERE_UNPAID // yellow — arrived / currently here but not paid
+  BOOKED_FIXED // red    — future, not arrived, must stay on this parcel
+  BOOKED_MOVABLE // orange — future, not paid/arrived, can be moved
+}
+
 model Booking {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   campId    String
-  camp      Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  camp      Camp          @relation(fields: [campId], references: [id], onDelete: Cascade)
   parcelId  String
-  parcel    Parcel   @relation(fields: [parcelId], references: [id], onDelete: Restrict)
+  parcel    Parcel        @relation(fields: [parcelId], references: [id], onDelete: Restrict)
   guestName String
   email     String?
   phone     String?
-  arrival   DateTime @db.Date
-  departure DateTime @db.Date
+  arrival   DateTime      @db.Date
+  departure DateTime      @db.Date
   people    Int
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
+  status    BookingStatus @default(BOOKED_MOVABLE)
+  notes     String?       @db.Text
+  createdAt DateTime      @default(now())
 
   @@index([campId])
   @@index([parcelId, arrival, departure])

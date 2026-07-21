@@ -1,5 +1,9 @@
 // Pure, runtime-free types shared between server (lib/data) and client components.
 
+// Booking status — drives the color everywhere (see lib/colors.ts). Values match the
+// Prisma BookingStatus enum exactly.
+export type BookingStatus = "PAID" | "HERE_UNPAID" | "BOOKED_FIXED" | "BOOKED_MOVABLE";
+
 export type BookingDTO = {
   id: string;
   parcelId: string;
@@ -9,6 +13,7 @@ export type BookingDTO = {
   arrival: string; // "YYYY-MM-DD"
   departure: string; // "YYYY-MM-DD"
   people: number;
+  status: BookingStatus;
   notes: string | null;
   createdAt: string; // "YYYY-MM-DD"
 };

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { addDays, parse, nightsBetween, formatDate, formatShort } from "@/lib/dates";
-import { colorForId } from "@/lib/colors";
+import { colorForStatus, statusMeta } from "@/lib/colors";
 import type { BookingDTO, ParcelVM, TypeVM } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
 import { DblClickEdit } from "./inline-edit";
@@ -55,8 +55,25 @@ export default function CalendarView({
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-stone-200 rounded-lg bg-white">
-        <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
+      <div className="flex flex-col lg:flex-row gap-3">
+        {/* legend — horizontal wrap on mobile, left column on desktop */}
+        <div className="lg:w-52 lg:shrink-0 border border-stone-200 rounded-lg bg-white p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">{L.legendTitle}</div>
+          <ul className="flex flex-row flex-wrap lg:flex-col gap-x-4 gap-y-2">
+            {statusMeta(L).map((m) => (
+              <li key={m.status} className="flex items-start gap-2">
+                <span className="w-3 h-3 rounded-full mt-0.5 shrink-0" style={{ background: m.color.bg }} />
+                <div className="leading-tight">
+                  <div className="text-xs font-medium text-stone-700">{m.label}</div>
+                  <div className="hidden lg:block text-[11px] text-stone-400">{m.desc}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="min-w-0 flex-1 overflow-x-auto border border-stone-200 rounded-lg bg-white">
+          <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
           {/* header */}
           <div className="flex sticky top-0 bg-white border-b border-stone-200 z-10">
             <div style={{ width: LABEL }} className="shrink-0 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-r border-stone-200 bg-white sticky left-0 z-20">
@@ -120,7 +137,7 @@ export default function CalendarView({
                       ))}
                       {/* booking bars — midday of arrival to midday of departure */}
                       {rowBookings.map((b) => {
-                        const c = colorForId(b.id);
+                        const c = colorForStatus(b.status);
                         const startIdx = nightsBetween(days[0], b.arrival);
                         const left = LABEL + (startIdx + 0.5) * W;
                         const width = nightsBetween(b.arrival, b.departure) * W;
@@ -138,7 +155,7 @@ export default function CalendarView({
                             className="absolute rounded-md flex items-center px-2 cursor-pointer shadow-sm hover:brightness-110"
                             style={{ left: clipL, width: clipR - clipL, top: 6, height: ROW - 12, background: c.bg }}
                           >
-                            <span className="text-[11px] font-medium text-white truncate">
+                            <span className="text-[11px] font-medium truncate" style={{ color: c.fg }}>
                               {b.guestName} · {b.people}p
                             </span>
                           </div>
@@ -149,6 +166,7 @@ export default function CalendarView({
                 })}
             </div>
           ))}
+          </div>
         </div>
       </div>
       <p className="mt-2 text-xs text-stone-400">{L.calHelp}</p>

@@ -47,6 +47,7 @@ export default function Dashboard({
     arrival,
     departure: departure || addDays(arrival, 7),
     people: 2,
+    status: "BOOKED_MOVABLE",
     notes: "",
     createdAt: today,
   });
@@ -60,6 +61,7 @@ export default function Dashboard({
     arrival: b.arrival,
     departure: b.departure,
     people: b.people,
+    status: b.status,
     notes: b.notes ?? "",
     createdAt: b.createdAt,
   });
@@ -83,6 +85,7 @@ export default function Dashboard({
       arrival: f.arrival,
       departure: f.departure,
       people: f.people,
+      status: f.status,
       notes: f.notes,
     };
     const ok = await api(f.id ? `/api/bookings/${f.id}` : "/api/bookings", f.id ? "PATCH" : "POST", payload);
@@ -107,6 +110,7 @@ export default function Dashboard({
     setParcelCap: (id, cap) => api(`/api/parcels/${id}`, "PATCH", { capacity: cap }),
     addParcel: (label, typeId, cap) => api("/api/parcels", "POST", { label, typeId, capacity: cap, order: parcels.length }),
     removeParcel: (id) => api(`/api/parcels/${id}`, "DELETE"),
+    reorderParcels: (ids) => api("/api/parcels/reorder", "POST", { ids }),
   };
 
   async function logout() {
@@ -171,7 +175,7 @@ export default function Dashboard({
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-5">
+      <main className={(view === "list" ? "max-w-none" : "max-w-6xl") + " mx-auto px-4 py-5"}>
         {view === "calendar" && (
           <CalendarView
             bookings={bookings}

@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/lib/dates";
-import { colorForId } from "@/lib/colors";
+import { colorForStatus } from "@/lib/colors";
 import type { BookingDTO } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
 
@@ -22,7 +22,7 @@ export default function TodayView({
   const departures = bookings.filter((b) => b.departure === today);
 
   const Card = ({ b, kind }: { b: BookingDTO; kind: "in" | "out" }) => {
-    const c = colorForId(b.id);
+    const c = colorForStatus(b.status);
     return (
       <button
         onClick={() => onEdit(b)}

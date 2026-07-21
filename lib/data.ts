@@ -5,9 +5,11 @@ import crypto from "crypto";
 import { prisma } from "./prisma";
 import { overlaps, fromDbDate, toDbDate } from "./dates";
 import { DEFAULT_TYPES, DEFAULT_PARCELS } from "./defaults";
-import type { BookingDTO } from "./types";
+import type { BookingDTO, BookingStatus } from "./types";
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+
+const STATUSES: BookingStatus[] = ["PAID", "HERE_UNPAID", "BOOKED_FIXED", "BOOKED_MOVABLE"];
 
 const toBookingDTO = (b: {
   id: string;
@@ -18,6 +20,7 @@ const toBookingDTO = (b: {
   arrival: Date;
   departure: Date;
   people: number;
+  status: string;
   notes: string | null;
   createdAt: Date;
 }): BookingDTO => ({
@@ -29,6 +32,7 @@ const toBookingDTO = (b: {
   arrival: fromDbDate(b.arrival),
   departure: fromDbDate(b.departure),
   people: b.people,
+  status: b.status as BookingStatus,
   notes: b.notes,
   createdAt: fromDbDate(b.createdAt),
 });
@@ -147,6 +151,7 @@ export type BookingInput = {
   arrival: string;
   departure: string;
   people: number;
+  status?: BookingStatus;
   notes?: string | null;
 };
 
@@ -155,7 +160,10 @@ function validateBookingInput(input: BookingInput) {
   if (!input.parcelId) throw new Error("Parcel is required.");
   if (!(input.departure > input.arrival)) throw new Error("Departure must be strictly after arrival.");
   if (!(input.people > 0)) throw new Error("People must be at least 1.");
+  if (input.status && !STATUSES.includes(input.status)) throw new Error("Invalid status.");
 }
+
+const normStatus = (s?: BookingStatus): BookingStatus => (s && STATUSES.includes(s) ? s : "BOOKED_MOVABLE");
 
 export async function createBooking(campId: string, input: BookingInput): Promise<BookingDTO> {
   validateBookingInput(input);
@@ -171,6 +179,7 @@ export async function createBooking(campId: string, input: BookingInput): Promis
       arrival: toDbDate(input.arrival),
       departure: toDbDate(input.departure),
       people: input.people,
+      status: normStatus(input.status),
       notes: input.notes || null,
     },
   });
@@ -192,6 +201,7 @@ export async function updateBooking(campId: string, id: string, input: BookingIn
       arrival: toDbDate(input.arrival),
       departure: toDbDate(input.departure),
       people: input.people,
+      status: normStatus(input.status),
       notes: input.notes || null,
     },
   });
@@ -247,4 +257,11 @@ export async function deleteParcel(campId: string, id: string) {
   const count = await prisma.booking.count({ where: { parcelId: id, campId } });
   if (count > 0) throw new InUseError("Parcel still has bookings.");
   return prisma.parcel.delete({ where: { id } });
+}
+
+/** Persist a new parcel display order. `ids` is the full ordered list; order = index. */
+export async function reorderParcels(campId: string, ids: string[]) {
+  const owned = await prisma.parcel.findMany({ where: { campId, id: { in: ids } }, select: { id: true } });
+  if (owned.length !== ids.length) throw new NotFoundError("Parcel not found.");
+  await prisma.$transaction(ids.map((id, i) => prisma.parcel.update({ where: { id }, data: { order: i } })));
 }

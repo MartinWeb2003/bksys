@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { nightsBetween, formatDate } from "@/lib/dates";
-import { colorForId } from "@/lib/colors";
+import { colorForStatus } from "@/lib/colors";
 import type { BookingDTO } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
 
@@ -55,7 +55,7 @@ export default function ListView({
             {rows.map((b) => (
               <tr key={b.id} onClick={() => onEdit(b)} className="cursor-pointer hover:bg-cyan-50/50">
                 <td className={td}>
-                  <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: colorForId(b.id).bg }} />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: colorForStatus(b.status).bg }} />
                 </td>
                 <td className={td + " font-mono font-bold"}>{labelOf(b.parcelId)}</td>
                 <td className={td + " font-medium text-stone-800"}>{b.guestName}</td>

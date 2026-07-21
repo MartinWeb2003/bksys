@@ -53,6 +53,8 @@ const en = {
   parcel: "Parcel",
   peopleLbl: "People",
   choose: "— choose —",
+  noParcelMatch: "No match",
+  parcelSearchPh: "Search parcel or type…",
   mustAfter: "Departure must be after arrival",
   nights: (n: number) => `${n} night${n === 1 ? "" : "s"}`,
   conflict: (name: string, parcel: string, a: string, d: string) =>
@@ -88,8 +90,9 @@ const en = {
   cantRemoveType: "Remove its parcels first",
   cantRemoveParcel: "Has bookings — delete them first",
   idPh: "e.g. A1",
+  dragHandle: "Drag to reorder",
   manageHelp:
-    "Rename anything inline (press Enter or click away to save). Renames are pure display changes — existing bookings are unaffected.",
+    "Rename anything inline (press Enter or click away to save). Drag the ⠿ handle to reorder parcels within a type.",
   loginTitle: "Camp desk",
   loginSubtitle: "Log in to your camp",
   registerSubtitle: "Create your camp account",
@@ -113,6 +116,16 @@ const en = {
   resetSuccess: "Password updated. You can log in now.",
   resetInvalid: "This reset link is invalid or has expired.",
   saveFailed: "Save failed — try again.",
+  statusLabel: "Status / color",
+  legendTitle: "Legend",
+  st_paid: "Paid",
+  st_paid_desc: "Reservation is paid for",
+  st_here: "Here — unpaid",
+  st_here_desc: "Currently on site, not yet paid",
+  st_fixed: "Upcoming — fixed",
+  st_fixed_desc: "Not arrived yet; must stay on this parcel",
+  st_movable: "Upcoming — movable",
+  st_movable_desc: "Not paid/arrived; can be moved to another parcel",
 };
 
 export type Strings = typeof en;
@@ -167,6 +180,8 @@ const hr: Strings = {
   parcel: "Parcela",
   peopleLbl: "Osobe",
   choose: "— odaberi —",
+  noParcelMatch: "Nema rezultata",
+  parcelSearchPh: "Pretraži parcelu ili tip…",
   mustAfter: "Odlazak mora biti nakon dolaska",
   nights: (n) => `${n} ${n === 1 ? "noć" : "noći"}`,
   conflict: (name, parcel, a, d) =>
@@ -202,8 +217,9 @@ const hr: Strings = {
   cantRemoveType: "Prvo uklonite njene parcele",
   cantRemoveParcel: "Ima rezervacije — prvo ih obrišite",
   idPh: "npr. A1",
+  dragHandle: "Povucite za promjenu redoslijeda",
   manageHelp:
-    "Preimenujte bilo što izravno (Enter ili klik izvan polja sprema). Preimenovanja su samo prikaz — postojeće rezervacije ostaju netaknute.",
+    "Preimenujte bilo što izravno (Enter ili klik izvan polja sprema). Povucite ručku ⠿ za promjenu redoslijeda parcela unutar tipa.",
   loginTitle: "Camp desk",
   loginSubtitle: "Prijavite se u svoj kamp",
   registerSubtitle: "Otvorite račun za kamp",
@@ -227,6 +243,16 @@ const hr: Strings = {
   resetSuccess: "Lozinka je ažurirana. Sada se možete prijaviti.",
   resetInvalid: "Poveznica je nevažeća ili je istekla.",
   saveFailed: "Spremanje nije uspjelo — pokušajte ponovno.",
+  statusLabel: "Status / boja",
+  legendTitle: "Legenda",
+  st_paid: "Plaćeno",
+  st_paid_desc: "Rezervacija je plaćena",
+  st_here: "Ovdje — neplaćeno",
+  st_here_desc: "Trenutno na terenu, još nije plaćeno",
+  st_fixed: "Dolazak — fiksno",
+  st_fixed_desc: "Još nije stigao; mora ostati na ovoj parceli",
+  st_movable: "Dolazak — premjestivo",
+  st_movable_desc: "Nije plaćeno/stiglo; može se premjestiti na drugu parcelu",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };

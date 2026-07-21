@@ -1,21 +1,36 @@
-// Deterministic booking color: same booking id -> same color in every view.
-// Never stored in the DB — derived on the fly.
+// Booking color is derived from its STATUS (not stored as a color). Same status -> same
+// color in every view. The four statuses and their meanings live in lib/types.ts.
 
-export const PALETTE = [
-  { bg: "#0E7490", soft: "#E0F2F7" }, // sea teal
-  { bg: "#B4552D", soft: "#F9E9E1" }, // terracotta
-  { bg: "#5B4FC4", soft: "#EAE8FA" }, // iris
-  { bg: "#0F766E", soft: "#DFF2F0" }, // pine
-  { bg: "#B91C1C", soft: "#FBE5E5" }, // brick
-  { bg: "#A16207", soft: "#F8EFDC" }, // ochre
-  { bg: "#1D4ED8", soft: "#E3EAFB" }, // cobalt
-  { bg: "#9D174D", soft: "#F9E3ED" }, // plum
-] as const;
+import type { BookingStatus } from "./types";
+import type { Strings } from "./i18n";
 
-export type Swatch = (typeof PALETTE)[number];
+export type Swatch = { bg: string; fg: string; soft: string };
 
-export const colorForId = (id: string): Swatch => {
-  let h = 0;
-  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return PALETTE[h % PALETTE.length];
+export const STATUS_COLORS: Record<BookingStatus, Swatch> = {
+  PAID: { bg: "#15803D", fg: "#ffffff", soft: "#DCFCE7" }, // green
+  HERE_UNPAID: { bg: "#FACC15", fg: "#1c1917", soft: "#FEF9C3" }, // yellow (dark text for contrast)
+  BOOKED_FIXED: { bg: "#DC2626", fg: "#ffffff", soft: "#FEE2E2" }, // red
+  BOOKED_MOVABLE: { bg: "#EA580C", fg: "#ffffff", soft: "#FFEDD5" }, // orange
 };
+
+// Legend / picker order.
+export const STATUS_ORDER: BookingStatus[] = ["PAID", "HERE_UNPAID", "BOOKED_FIXED", "BOOKED_MOVABLE"];
+
+export const colorForStatus = (status: BookingStatus): Swatch => STATUS_COLORS[status];
+
+const STATUS_KEYS: Record<BookingStatus, { label: keyof Strings; desc: keyof Strings }> = {
+  PAID: { label: "st_paid", desc: "st_paid_desc" },
+  HERE_UNPAID: { label: "st_here", desc: "st_here_desc" },
+  BOOKED_FIXED: { label: "st_fixed", desc: "st_fixed_desc" },
+  BOOKED_MOVABLE: { label: "st_movable", desc: "st_movable_desc" },
+};
+
+/** Ordered status metadata for the legend + form picker (label/desc localized). */
+export function statusMeta(L: Strings) {
+  return STATUS_ORDER.map((status) => ({
+    status,
+    color: STATUS_COLORS[status],
+    label: L[STATUS_KEYS[status].label] as string,
+    desc: L[STATUS_KEYS[status].desc] as string,
+  }));
+}
