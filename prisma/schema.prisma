@@ -1,0 +1,84 @@
+// Camp Desk — multi-tenant booking dashboard.
+// Each Camp is a tenant: its ParcelTypes, Parcels and Bookings are isolated by campId.
+// Isolation is enforced centrally in lib/data.ts — every query is scoped to a campId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooled connection (Neon) for the app
+  directUrl = env("DIRECT_URL")     // direct connection for migrations
+}
+
+model Camp {
+  id           String          @id @default(cuid())
+  name         String                                 // camp display name
+  email        String          @unique                // login identity
+  passwordHash String                                 // bcrypt hash — never plaintext
+  createdAt    DateTime        @default(now())
+  types        ParcelType[]
+  parcels      Parcel[]
+  bookings     Booking[]
+  resets       PasswordReset[]
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  campId    String
+  camp      Camp      @relation(fields: [campId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique          // sha256 of the emailed token — raw token is never stored
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([campId])
+}
+
+model ParcelType {
+  id      String   @id @default(cuid())
+  campId  String
+  camp    Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  name    String                              // display label, e.g. "Parcel A" — admin-editable
+  order   Int      @default(0)
+  parcels Parcel[]
+
+  @@unique([campId, name]) // unique per camp, not globally
+  @@index([campId])
+}
+
+model Parcel {
+  id       String     @id @default(cuid())
+  campId   String
+  camp     Camp       @relation(fields: [campId], references: [id], onDelete: Cascade)
+  label    String                            // human-readable, e.g. "A1" — admin-editable
+  typeId   String
+  type     ParcelType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  capacity Int
+  order    Int        @default(0)
+  bookings Booking[]
+
+  @@unique([campId, label]) // unique per camp
+  @@index([campId])
+  @@index([typeId])
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  campId    String
+  camp      Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  parcelId  String
+  parcel    Parcel   @relation(fields: [parcelId], references: [id], onDelete: Restrict)
+  guestName String
+  email     String?
+  phone     String?
+  arrival   DateTime @db.Date
+  departure DateTime @db.Date
+  people    Int
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([campId])
+  @@index([parcelId, arrival, departure])
+}
