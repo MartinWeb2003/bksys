@@ -38,19 +38,19 @@ export default function CalendarView({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <div className="flex gap-1.5">
-          <button onClick={() => setStart(addDays(start, -7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50">
+          <button onClick={() => setStart(addDays(start, -7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.prevWeek}
           </button>
-          <button onClick={() => setStart(addDays(today, -6))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50">
+          <button onClick={() => setStart(addDays(today, -6))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.today}
           </button>
-          <button onClick={() => setStart(addDays(start, 7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50">
+          <button onClick={() => setStart(addDays(start, 7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.nextWeek}
           </button>
         </div>
-        <div className="text-sm font-mono text-stone-500">
+        <div className="ml-auto text-sm font-mono text-stone-500 whitespace-nowrap">
           {formatDate(days[0])} – {formatDate(days[DAYS - 1])}
         </div>
       </div>
