@@ -1,11 +1,92 @@
 "use client";
 
 import { useState } from "react";
+import {
+  DndContext,
+  pointerWithin,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { addDays, parse, nightsBetween, formatDate, formatShort } from "@/lib/dates";
-import { colorForStatus, statusMeta } from "@/lib/colors";
+import { colorForStatus, statusMeta, type Swatch } from "@/lib/colors";
 import type { BookingDTO, ParcelVM, TypeVM } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
 import { DblClickEdit } from "./inline-edit";
+
+function DroppableCell({
+  parcelId,
+  date,
+  today,
+  width,
+  onCreate,
+}: {
+  parcelId: string;
+  date: string;
+  today: string;
+  width: number;
+  onCreate: (parcelId: string, date: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `cell:${parcelId}:${date}`, data: { parcelId, date } });
+  const wd = parse(date).getUTCDay();
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ width }}
+      onClick={() => onCreate(parcelId, date)}
+      className={
+        "shrink-0 border-r border-stone-100 cursor-pointer hover:bg-cyan-50/60 " +
+        (isOver ? "bg-cyan-100" : date === today ? "bg-cyan-50/40" : wd % 6 === 0 ? "bg-stone-50/60" : "")
+      }
+    />
+  );
+}
+
+function DraggableBar({
+  b,
+  color,
+  draggable,
+  style,
+  onEdit,
+}: {
+  b: BookingDTO;
+  color: Swatch;
+  draggable: boolean;
+  style: React.CSSProperties;
+  onEdit: (b: BookingDTO) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `bar:${b.id}`,
+    data: { booking: b },
+    disabled: !draggable,
+  });
+  const dragTransform = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : null;
+  return (
+    <div
+      ref={setNodeRef}
+      {...(draggable ? { ...listeners, ...attributes } : {})}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEdit(b);
+      }}
+      title={`${b.guestName} · ${formatDate(b.arrival)} → ${formatDate(b.departure)} · ${b.people}p`}
+      className={
+        "absolute rounded-md flex items-center px-2 shadow-sm hover:brightness-110 " +
+        (draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer") +
+        (isDragging ? " opacity-70 z-30" : "")
+      }
+      style={{ ...style, background: color.bg, touchAction: draggable ? "none" : undefined, ...dragTransform }}
+    >
+      <span className="text-[11px] font-medium truncate" style={{ color: color.fg }}>
+        {b.guestName} · {b.people}p
+      </span>
+    </div>
+  );
+}
 
 export default function CalendarView({
   bookings,
@@ -16,6 +97,7 @@ export default function CalendarView({
   actions,
   onEdit,
   onCreate,
+  onMove,
 }: {
   bookings: BookingDTO[];
   types: TypeVM[];
@@ -28,6 +110,7 @@ export default function CalendarView({
   };
   onEdit: (b: BookingDTO) => void;
   onCreate: (parcelId: string, date: string) => void;
+  onMove: (b: BookingDTO, parcelId: string, arrival: string, departure: string) => void;
 }) {
   const [start, setStart] = useState(addDays(today, -6));
   const DAYS = 21,
@@ -35,6 +118,22 @@ export default function CalendarView({
     ROW = 40,
     LABEL = 92;
   const days = Array.from({ length: DAYS }, (_, i) => addDays(start, i));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const b = e.active.data.current?.booking as BookingDTO | undefined;
+    const cell = e.over?.data.current as { parcelId: string; date: string } | undefined;
+    if (!b || !cell) return;
+    const nights = nightsBetween(b.arrival, b.departure);
+    const arrival = cell.date;
+    const departure = addDays(arrival, nights);
+    if (cell.parcelId === b.parcelId && arrival === b.arrival) return; // no change
+    onMove(b, cell.parcelId, arrival, departure);
+  }
 
   return (
     <div>
@@ -51,7 +150,7 @@ export default function CalendarView({
           </button>
         </div>
         <div className="ml-auto text-sm font-mono text-stone-500 whitespace-nowrap">
-          {formatDate(days[0])} – {formatDate(days[DAYS - 1])}
+          {formatDate(days[0])} → {formatDate(days[DAYS - 1])}
         </div>
       </div>
 
@@ -73,100 +172,88 @@ export default function CalendarView({
         </div>
 
         <div className="min-w-0 flex-1 overflow-x-auto border border-stone-200 rounded-lg bg-white">
-          <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
-          {/* header */}
-          <div className="flex sticky top-0 bg-white border-b border-stone-200 z-10">
-            <div style={{ width: LABEL }} className="shrink-0 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-r border-stone-200 bg-white sticky left-0 z-20">
-              {L.colParcel}
-            </div>
-            {days.map((d) => {
-              const dt = parse(d),
-                wd = dt.getUTCDay(),
-                isToday = d === today;
-              return (
-                <div
-                  key={d}
-                  style={{ width: W }}
-                  className={"shrink-0 text-center py-1 border-r border-stone-100 " + (isToday ? "bg-cyan-800 text-white" : wd === 0 || wd === 6 ? "bg-stone-50" : "")}
-                >
-                  <div className={"text-[10px] " + (isToday ? "text-cyan-100" : "text-stone-400")}>{L.weekd[wd]}</div>
-                  <div className="text-xs font-mono font-semibold">{formatShort(d)}</div>
+          <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
+            <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
+              {/* header */}
+              <div className="flex sticky top-0 bg-white border-b border-stone-200 z-10">
+                <div style={{ width: LABEL }} className="shrink-0 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-r border-stone-200 bg-white sticky left-0 z-20">
+                  {L.colParcel}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* rows grouped by type */}
-          {types.map((type) => (
-            <div key={type.id}>
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-stone-400 bg-stone-50 border-b border-stone-200">
-                <span className="sticky left-2 inline-block z-10">
-                  <DblClickEdit
-                    value={type.name}
-                    onCommit={(next) => actions.renameType(type.id, next)}
-                    editClass="border border-cyan-700 rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-stone-700 focus:outline-none"
-                  />
-                </span>
-              </div>
-              {parcels
-                .filter((p) => p.typeId === type.id)
-                .map((p) => {
-                  const rowBookings = bookings.filter((b) => b.parcelId === p.id && b.arrival < days[DAYS - 1] && b.departure > days[0]);
+                {days.map((d) => {
+                  const dt = parse(d),
+                    wd = dt.getUTCDay(),
+                    isToday = d === today;
                   return (
-                    <div key={p.id} className="flex border-b border-stone-100 relative" style={{ height: ROW }}>
-                      <div style={{ width: LABEL }} className="shrink-0 px-2 flex items-center gap-1.5 border-r border-stone-200 bg-white sticky left-0 z-10">
-                        <DblClickEdit
-                          value={p.label}
-                          onCommit={(next) => actions.renameParcel(p.id, next)}
-                          display="font-mono font-bold text-sm text-stone-700"
-                          editClass="w-14 border border-cyan-700 rounded px-1 py-0.5 font-mono font-bold text-sm bg-white text-stone-700 focus:outline-none"
-                        />
-                        <span className="text-[10px] text-stone-400">·{p.capacity}p</span>
-                      </div>
-                      {/* clickable empty cells */}
-                      {days.map((d) => (
-                        <div
-                          key={d}
-                          style={{ width: W }}
-                          onClick={() => onCreate(p.id, d)}
-                          className={
-                            "shrink-0 border-r border-stone-100 cursor-pointer hover:bg-cyan-50/60 " +
-                            (d === today ? "bg-cyan-50/40" : parse(d).getUTCDay() % 6 === 0 ? "bg-stone-50/60" : "")
-                          }
-                        />
-                      ))}
-                      {/* booking bars — midday of arrival to midday of departure */}
-                      {rowBookings.map((b) => {
-                        const c = colorForStatus(b.status);
-                        const startIdx = nightsBetween(days[0], b.arrival);
-                        const left = LABEL + (startIdx + 0.5) * W;
-                        const width = nightsBetween(b.arrival, b.departure) * W;
-                        const clipL = Math.max(left, LABEL);
-                        const clipR = Math.min(left + width, LABEL + DAYS * W);
-                        if (clipR <= clipL) return null;
-                        return (
-                          <div
-                            key={b.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(b);
-                            }}
-                            title={b.guestName + " · " + formatDate(b.arrival) + " → " + formatDate(b.departure) + " · " + b.people + "p"}
-                            className="absolute rounded-md flex items-center px-2 cursor-pointer shadow-sm hover:brightness-110"
-                            style={{ left: clipL, width: clipR - clipL, top: 6, height: ROW - 12, background: c.bg }}
-                          >
-                            <span className="text-[11px] font-medium truncate" style={{ color: c.fg }}>
-                              {b.guestName} · {b.people}p
-                            </span>
-                          </div>
-                        );
-                      })}
+                    <div
+                      key={d}
+                      style={{ width: W }}
+                      className={"shrink-0 text-center py-1 border-r border-stone-100 " + (isToday ? "bg-cyan-800 text-white" : wd === 0 || wd === 6 ? "bg-stone-50" : "")}
+                    >
+                      <div className={"text-[10px] " + (isToday ? "text-cyan-100" : "text-stone-400")}>{L.weekd[wd]}</div>
+                      <div className="text-xs font-mono font-semibold">{formatShort(d)}</div>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* rows grouped by type */}
+              {types.map((type) => (
+                <div key={type.id}>
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-stone-400 bg-stone-50 border-b border-stone-200">
+                    <span className="sticky left-2 inline-block z-10">
+                      <DblClickEdit
+                        value={type.name}
+                        onCommit={(next) => actions.renameType(type.id, next)}
+                        editClass="border border-cyan-700 rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-stone-700 focus:outline-none"
+                      />
+                    </span>
+                  </div>
+                  {parcels
+                    .filter((p) => p.typeId === type.id)
+                    .map((p) => {
+                      const rowBookings = bookings.filter((b) => b.parcelId === p.id && b.arrival < days[DAYS - 1] && b.departure > days[0]);
+                      return (
+                        <div key={p.id} className="flex border-b border-stone-100 relative" style={{ height: ROW }}>
+                          <div style={{ width: LABEL }} className="shrink-0 px-2 flex items-center gap-1.5 border-r border-stone-200 bg-white sticky left-0 z-10">
+                            <DblClickEdit
+                              value={p.label}
+                              onCommit={(next) => actions.renameParcel(p.id, next)}
+                              display="font-mono font-bold text-sm text-stone-700"
+                              editClass="w-14 border border-cyan-700 rounded px-1 py-0.5 font-mono font-bold text-sm bg-white text-stone-700 focus:outline-none"
+                            />
+                            <span className="text-[10px] text-stone-400">·{p.capacity}p</span>
+                          </div>
+                          {/* droppable empty cells */}
+                          {days.map((d) => (
+                            <DroppableCell key={d} parcelId={p.id} date={d} today={today} width={W} onCreate={onCreate} />
+                          ))}
+                          {/* booking bars — midday of arrival to midday of departure; draggable except red (fixed) */}
+                          {rowBookings.map((b) => {
+                            const c = colorForStatus(b.status);
+                            const startIdx = nightsBetween(days[0], b.arrival);
+                            const left = LABEL + (startIdx + 0.5) * W;
+                            const width = nightsBetween(b.arrival, b.departure) * W;
+                            const clipL = Math.max(left, LABEL);
+                            const clipR = Math.min(left + width, LABEL + DAYS * W);
+                            if (clipR <= clipL) return null;
+                            return (
+                              <DraggableBar
+                                key={b.id}
+                                b={b}
+                                color={c}
+                                draggable={b.status !== "BOOKED_FIXED"}
+                                onEdit={onEdit}
+                                style={{ left: clipL, width: clipR - clipL, top: 6, height: ROW - 12 }}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                </div>
+              ))}
             </div>
-          ))}
-          </div>
+          </DndContext>
         </div>
       </div>
       <p className="mt-2 text-xs text-stone-400">{L.calHelp}</p>

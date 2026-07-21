@@ -14,6 +14,7 @@ export type BookingDTO = {
   departure: string; // "YYYY-MM-DD"
   people: number;
   status: BookingStatus;
+  confirmed: boolean; // false = tentative (Nepotvrđeno), kept off the calendar
   notes: string | null;
   createdAt: string; // "YYYY-MM-DD"
 };

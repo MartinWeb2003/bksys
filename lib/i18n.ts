@@ -1,5 +1,5 @@
 // UI string dictionary. Croatian is the default; English is the alternate.
-// No i18n framework — just typed maps. Guest data/notes are never translated.
+// No i18n framework, just typed maps. Guest data/notes are never translated.
 
 export type Lang = "hr" | "en";
 
@@ -19,7 +19,7 @@ const en = {
   nextWeek: "week →",
   colParcel: "Parcel",
   calHelp:
-    "Bars run from midday of arrival to midday of departure — so a departure and a new arrival can share the same date on one parcel. Click an empty cell to add a booking there.",
+    "Bars run from midday of arrival to midday of departure, so a departure and a new arrival can share the same date on one parcel. Click an empty cell to add a booking there.",
   arrivingToday: "Arriving today",
   departingToday: "Departing today",
   people: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
@@ -44,7 +44,7 @@ const en = {
         ? `Free: ${start} onwards.`
         : !start && end
           ? `Free until ${end}.`
-          : `Free: ${start} – ${end}.`,
+          : `Free: ${start} to ${end}.`,
   editBooking: "Edit booking",
   newBookingTitle: "New booking",
   guestName: "Guest name",
@@ -52,13 +52,13 @@ const en = {
   phone: "Phone",
   parcel: "Parcel",
   peopleLbl: "People",
-  choose: "— choose —",
+  choose: "choose…",
   noParcelMatch: "No match",
   parcelSearchPh: "Search parcel or type…",
   mustAfter: "Departure must be after arrival",
   nights: (n: number) => `${n} night${n === 1 ? "" : "s"}`,
   conflict: (name: string, parcel: string, a: string, d: string) =>
-    `Conflict: ${name} has ${parcel} from ${a} to ${d}. Same-day turnover is fine — full overlap isn't.`,
+    `Conflict: ${name} has ${parcel} from ${a} to ${d}. Same-day turnover is fine, full overlap isn't.`,
   extraInfo: "Extra info",
   reservedOn: (d: string) => `Reserved on ${d}`,
   deleteBooking: "Delete booking",
@@ -88,7 +88,7 @@ const en = {
   addParcel: "Add parcel",
   remove: "Remove",
   cantRemoveType: "Remove its parcels first",
-  cantRemoveParcel: "Has bookings — delete them first",
+  cantRemoveParcel: "Has bookings, delete them first",
   idPh: "e.g. A1",
   dragHandle: "Drag to reorder",
   manageHelp:
@@ -115,17 +115,24 @@ const en = {
   resetButton: "Set new password",
   resetSuccess: "Password updated. You can log in now.",
   resetInvalid: "This reset link is invalid or has expired.",
-  saveFailed: "Save failed — try again.",
+  saveFailed: "Save failed, try again.",
   statusLabel: "Status / color",
   legendTitle: "Legend",
   st_paid: "Paid",
   st_paid_desc: "Reservation is paid for",
-  st_here: "Here — unpaid",
+  st_here: "Here, unpaid",
   st_here_desc: "Currently on site, not yet paid",
-  st_fixed: "Upcoming — fixed",
+  st_fixed: "Upcoming, fixed",
   st_fixed_desc: "Not arrived yet; must stay on this parcel",
-  st_movable: "Upcoming — movable",
+  st_movable: "Upcoming, movable",
   st_movable_desc: "Not paid/arrived; can be moved to another parcel",
+  tab_unconfirmed: "Unconfirmed",
+  unconfirmedToggle: "Unconfirmed (keep off the calendar)",
+  confirmBtn: "Confirm",
+  addUnconfirmed: "+ New tentative",
+  noUnconfirmed: "No tentative reservations.",
+  unconfirmedHelp:
+    "Tentative reservations you're not sure about yet. They don't show on the calendar and don't block availability. Confirm one to move it onto the calendar.",
 };
 
 export type Strings = typeof en;
@@ -146,7 +153,7 @@ const hr: Strings = {
   nextWeek: "tjedan →",
   colParcel: "Parcela",
   calHelp:
-    "Trake idu od podneva dolaska do podneva odlaska — pa odlazak i novi dolazak mogu dijeliti isti datum na istoj parceli. Kliknite prazno polje za novu rezervaciju.",
+    "Trake idu od podneva dolaska do podneva odlaska, pa odlazak i novi dolazak mogu dijeliti isti datum na istoj parceli. Kliknite prazno polje za novu rezervaciju.",
   arrivingToday: "Dolasci danas",
   departingToday: "Odlasci danas",
   people: (n) => `${n} ${n === 1 ? "osoba" : "osobe"}`,
@@ -171,7 +178,7 @@ const hr: Strings = {
         ? `Slobodno: ${start} nadalje.`
         : !start && end
           ? `Slobodno do ${end}.`
-          : `Slobodno: ${start} – ${end}.`,
+          : `Slobodno: ${start} do ${end}.`,
   editBooking: "Uredi rezervaciju",
   newBookingTitle: "Nova rezervacija",
   guestName: "Ime gosta",
@@ -179,13 +186,13 @@ const hr: Strings = {
   phone: "Telefon",
   parcel: "Parcela",
   peopleLbl: "Osobe",
-  choose: "— odaberi —",
+  choose: "odaberi…",
   noParcelMatch: "Nema rezultata",
   parcelSearchPh: "Pretraži parcelu ili tip…",
   mustAfter: "Odlazak mora biti nakon dolaska",
   nights: (n) => `${n} ${n === 1 ? "noć" : "noći"}`,
   conflict: (name, parcel, a, d) =>
-    `Sukob: ${name} ima ${parcel} od ${a} do ${d}. Izmjena istog dana je u redu — potpuno preklapanje nije.`,
+    `Sukob: ${name} ima ${parcel} od ${a} do ${d}. Izmjena istog dana je u redu, potpuno preklapanje nije.`,
   extraInfo: "Dodatne informacije",
   reservedOn: (d) => `Rezervirano ${d}`,
   deleteBooking: "Obriši rezervaciju",
@@ -215,7 +222,7 @@ const hr: Strings = {
   addParcel: "Dodaj parcelu",
   remove: "Ukloni",
   cantRemoveType: "Prvo uklonite njene parcele",
-  cantRemoveParcel: "Ima rezervacije — prvo ih obrišite",
+  cantRemoveParcel: "Ima rezervacije, prvo ih obrišite",
   idPh: "npr. A1",
   dragHandle: "Povucite za promjenu redoslijeda",
   manageHelp:
@@ -242,17 +249,24 @@ const hr: Strings = {
   resetButton: "Postavi novu lozinku",
   resetSuccess: "Lozinka je ažurirana. Sada se možete prijaviti.",
   resetInvalid: "Poveznica je nevažeća ili je istekla.",
-  saveFailed: "Spremanje nije uspjelo — pokušajte ponovno.",
+  saveFailed: "Spremanje nije uspjelo, pokušajte ponovno.",
   statusLabel: "Status / boja",
   legendTitle: "Legenda",
   st_paid: "Plaćeno",
   st_paid_desc: "Rezervacija je plaćena",
-  st_here: "Ovdje — neplaćeno",
+  st_here: "Ovdje, neplaćeno",
   st_here_desc: "Trenutno na terenu, još nije plaćeno",
-  st_fixed: "Dolazak — fiksno",
+  st_fixed: "Dolazak, fiksno",
   st_fixed_desc: "Još nije stigao; mora ostati na ovoj parceli",
-  st_movable: "Dolazak — premjestivo",
+  st_movable: "Dolazak, premjestivo",
   st_movable_desc: "Nije plaćeno/stiglo; može se premjestiti na drugu parcelu",
+  tab_unconfirmed: "Nepotvrđeno",
+  unconfirmedToggle: "Nepotvrđeno (drži izvan kalendara)",
+  confirmBtn: "Potvrdi",
+  addUnconfirmed: "+ Nova nepotvrđena",
+  noUnconfirmed: "Nema nepotvrđenih rezervacija.",
+  unconfirmedHelp:
+    "Nepotvrđene rezervacije u koje još niste sigurni. Ne prikazuju se na kalendaru i ne zauzimaju termine. Potvrdite ih da ih prebacite na kalendar.",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };

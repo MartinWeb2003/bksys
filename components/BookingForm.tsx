@@ -16,6 +16,7 @@ export type BookingFormState = {
   departure: string;
   people: number;
   status: BookingStatus;
+  confirmed: boolean;
   notes: string;
   createdAt: string;
 };
@@ -237,6 +238,15 @@ export default function BookingForm({
             )}
             {saveError && <span className="block mt-1 text-red-700 font-medium">{L.saveFailed}</span>}
           </div>
+          <label className="col-span-2 flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!f.confirmed}
+              onChange={(e) => setF({ ...f, confirmed: !e.target.checked })}
+              className="w-4 h-4 accent-cyan-800"
+            />
+            <span className="text-sm text-stone-600">{L.unconfirmedToggle}</span>
+          </label>
           <div className="col-span-2">
             <label className={lbl}>{L.extraInfo}</label>
             <textarea className={inp + " min-h-[70px]"} value={f.notes} onChange={set("notes")} placeholder={L.phNotes} />

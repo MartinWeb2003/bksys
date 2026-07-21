@@ -214,7 +214,7 @@ export default function ManageView({
                     ))}
                   </div>
                 </SortableContext>
-                {g.items.length === 0 && <div className="px-3 py-2 text-xs text-stone-300">—</div>}
+                {g.items.length === 0 && <div className="px-3 py-2 text-xs text-stone-300">·</div>}
               </div>
             ))}
           </DndContext>

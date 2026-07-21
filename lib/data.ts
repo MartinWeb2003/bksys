@@ -21,6 +21,7 @@ const toBookingDTO = (b: {
   departure: Date;
   people: number;
   status: string;
+  confirmed: boolean;
   notes: string | null;
   createdAt: Date;
 }): BookingDTO => ({
@@ -33,6 +34,7 @@ const toBookingDTO = (b: {
   departure: fromDbDate(b.departure),
   people: b.people,
   status: b.status as BookingStatus,
+  confirmed: b.confirmed,
   notes: b.notes,
   createdAt: fromDbDate(b.createdAt),
 });
@@ -135,9 +137,10 @@ async function ownBooking(campId: string, id: string) {
 
 // ---------- booking writes (server re-validates the overlap rule — never trust the client) ----------
 
+// Only CONFIRMED bookings hold a slot — tentative (unconfirmed) ones never conflict.
 async function assertNoConflict(campId: string, parcelId: string, arrival: string, departure: string, excludeId?: string) {
   const candidates = await prisma.booking.findMany({
-    where: { campId, parcelId, id: excludeId ? { not: excludeId } : undefined },
+    where: { campId, parcelId, confirmed: true, id: excludeId ? { not: excludeId } : undefined },
   });
   const hit = candidates.find((b) => overlaps(arrival, departure, fromDbDate(b.arrival), fromDbDate(b.departure)));
   if (hit) throw new ConflictError(toBookingDTO(hit));
@@ -152,6 +155,7 @@ export type BookingInput = {
   departure: string;
   people: number;
   status?: BookingStatus;
+  confirmed?: boolean;
   notes?: string | null;
 };
 
@@ -168,7 +172,8 @@ const normStatus = (s?: BookingStatus): BookingStatus => (s && STATUSES.includes
 export async function createBooking(campId: string, input: BookingInput): Promise<BookingDTO> {
   validateBookingInput(input);
   await ownParcel(campId, input.parcelId);
-  await assertNoConflict(campId, input.parcelId, input.arrival, input.departure);
+  const confirmed = input.confirmed ?? true;
+  if (confirmed) await assertNoConflict(campId, input.parcelId, input.arrival, input.departure);
   const row = await prisma.booking.create({
     data: {
       campId,
@@ -180,6 +185,7 @@ export async function createBooking(campId: string, input: BookingInput): Promis
       departure: toDbDate(input.departure),
       people: input.people,
       status: normStatus(input.status),
+      confirmed,
       notes: input.notes || null,
     },
   });
@@ -190,7 +196,8 @@ export async function updateBooking(campId: string, id: string, input: BookingIn
   validateBookingInput(input);
   await ownBooking(campId, id);
   await ownParcel(campId, input.parcelId);
-  await assertNoConflict(campId, input.parcelId, input.arrival, input.departure, id);
+  const confirmed = input.confirmed ?? true;
+  if (confirmed) await assertNoConflict(campId, input.parcelId, input.arrival, input.departure, id);
   const row = await prisma.booking.update({
     where: { id },
     data: {
@@ -202,6 +209,7 @@ export async function updateBooking(campId: string, id: string, input: BookingIn
       departure: toDbDate(input.departure),
       people: input.people,
       status: normStatus(input.status),
+      confirmed,
       notes: input.notes || null,
     },
   });

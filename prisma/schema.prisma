@@ -84,6 +84,7 @@ model Booking {
   departure DateTime      @db.Date
   people    Int
   status    BookingStatus @default(BOOKED_MOVABLE)
+  confirmed Boolean       @default(true) // false = tentative, kept off the calendar (Nepotvrđeno)
   notes     String?       @db.Text
   createdAt DateTime      @default(now())
 

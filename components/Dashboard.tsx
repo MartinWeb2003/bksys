@@ -9,10 +9,11 @@ import CalendarView from "./CalendarView";
 import TodayView from "./TodayView";
 import AvailabilityView from "./AvailabilityView";
 import ListView from "./ListView";
+import UnconfirmedView from "./UnconfirmedView";
 import ManageView, { type ManageActions } from "./ManageView";
 import BookingForm, { type BookingFormState } from "./BookingForm";
 
-type View = "calendar" | "today" | "availability" | "list" | "manage";
+type View = "calendar" | "today" | "availability" | "list" | "unconfirmed" | "manage";
 
 export default function Dashboard({
   initialBookings,
@@ -34,11 +35,15 @@ export default function Dashboard({
   const parcels = initialParcels;
   const types = initialTypes;
 
+  // Confirmed bookings live on the calendar/lists; unconfirmed (tentative) ones only on Nepotvrđeno.
+  const confirmedBookings = useMemo(() => bookings.filter((b) => b.confirmed), [bookings]);
+  const unconfirmedBookings = useMemo(() => bookings.filter((b) => !b.confirmed), [bookings]);
+
   const today = useMemo(() => todayISO(), []);
   const labelById = useMemo(() => new Map(parcels.map((p) => [p.id, p.label])), [parcels]);
   const labelOf = (id: string) => labelById.get(id) ?? id;
 
-  const blank = (parcelId = "", arrival = today, departure = ""): BookingFormState => ({
+  const blank = (parcelId = "", arrival = today, departure = "", confirmed = true): BookingFormState => ({
     id: null,
     parcelId,
     guestName: "",
@@ -48,6 +53,7 @@ export default function Dashboard({
     departure: departure || addDays(arrival, 7),
     people: 2,
     status: "BOOKED_MOVABLE",
+    confirmed,
     notes: "",
     createdAt: today,
   });
@@ -62,6 +68,7 @@ export default function Dashboard({
     departure: b.departure,
     people: b.people,
     status: b.status,
+    confirmed: b.confirmed,
     notes: b.notes ?? "",
     createdAt: b.createdAt,
   });
@@ -76,19 +83,32 @@ export default function Dashboard({
     return res.ok;
   }
 
+  const payloadOf = (b: {
+    parcelId: string;
+    guestName: string;
+    email: string | null;
+    phone: string | null;
+    arrival: string;
+    departure: string;
+    people: number;
+    status: BookingDTO["status"];
+    confirmed: boolean;
+    notes: string | null;
+  }) => ({
+    parcelId: b.parcelId,
+    guestName: b.guestName,
+    email: b.email,
+    phone: b.phone,
+    arrival: b.arrival,
+    departure: b.departure,
+    people: b.people,
+    status: b.status,
+    confirmed: b.confirmed,
+    notes: b.notes,
+  });
+
   async function saveBooking(f: BookingFormState): Promise<boolean> {
-    const payload = {
-      parcelId: f.parcelId,
-      guestName: f.guestName,
-      email: f.email,
-      phone: f.phone,
-      arrival: f.arrival,
-      departure: f.departure,
-      people: f.people,
-      status: f.status,
-      notes: f.notes,
-    };
-    const ok = await api(f.id ? `/api/bookings/${f.id}` : "/api/bookings", f.id ? "PATCH" : "POST", payload);
+    const ok = await api(f.id ? `/api/bookings/${f.id}` : "/api/bookings", f.id ? "PATCH" : "POST", payloadOf(f));
     if (ok) setModal(null);
     return ok;
   }
@@ -96,6 +116,17 @@ export default function Dashboard({
   async function deleteBooking(id: string) {
     await api(`/api/bookings/${id}`, "DELETE");
     setModal(null);
+  }
+
+  // One-click confirm from the Nepotvrđeno list; if it conflicts, open the editor to fix.
+  async function confirmBooking(b: BookingDTO) {
+    const ok = await api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, confirmed: true }));
+    if (!ok) setModal(toForm(b));
+  }
+
+  // Calendar drag: move a booking to a new parcel/date, preserving nights. Conflicts are rejected by the server.
+  async function moveBooking(b: BookingDTO, parcelId: string, arrival: string, departure: string) {
+    await api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, parcelId, arrival, departure }));
   }
 
   const actions: ManageActions & {
@@ -124,6 +155,7 @@ export default function Dashboard({
     ["today", L.tab_today],
     ["availability", L.tab_availability],
     ["list", L.tab_list],
+    ["unconfirmed", L.tab_unconfirmed],
     ["manage", L.tab_manage],
   ];
 
@@ -175,10 +207,10 @@ export default function Dashboard({
         </div>
       </header>
 
-      <main className={(view === "list" ? "max-w-none" : "max-w-6xl") + " mx-auto px-4 py-5"}>
+      <main className={(view === "list" || view === "calendar" ? "max-w-none" : "max-w-6xl") + " mx-auto px-4 py-5"}>
         {view === "calendar" && (
           <CalendarView
-            bookings={bookings}
+            bookings={confirmedBookings}
             types={types}
             parcels={parcels}
             today={today}
@@ -186,13 +218,24 @@ export default function Dashboard({
             actions={actions}
             onEdit={onEdit}
             onCreate={(p, d) => setModal(blank(p, d))}
+            onMove={moveBooking}
           />
         )}
-        {view === "today" && <TodayView bookings={bookings} today={today} L={L} labelOf={labelOf} onEdit={onEdit} />}
+        {view === "today" && <TodayView bookings={confirmedBookings} today={today} L={L} labelOf={labelOf} onEdit={onEdit} />}
         {view === "availability" && (
-          <AvailabilityView bookings={bookings} types={types} parcels={parcels} today={today} L={L} onCreate={(p, a, d) => setModal(blank(p, a, d))} />
+          <AvailabilityView bookings={confirmedBookings} types={types} parcels={parcels} today={today} L={L} onCreate={(p, a, d) => setModal(blank(p, a, d))} />
         )}
-        {view === "list" && <ListView bookings={bookings} L={L} labelOf={labelOf} onEdit={onEdit} />}
+        {view === "list" && <ListView bookings={confirmedBookings} L={L} labelOf={labelOf} onEdit={onEdit} />}
+        {view === "unconfirmed" && (
+          <UnconfirmedView
+            bookings={unconfirmedBookings}
+            L={L}
+            labelOf={labelOf}
+            onEdit={onEdit}
+            onConfirm={confirmBooking}
+            onCreate={() => setModal(blank("", today, "", false))}
+          />
+        )}
         {view === "manage" && <ManageView types={types} parcels={parcels} bookings={bookings} L={L} actions={actions} />}
       </main>
 
