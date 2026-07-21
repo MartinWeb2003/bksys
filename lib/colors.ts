@@ -9,8 +9,8 @@ export type Swatch = { bg: string; fg: string; soft: string };
 export const STATUS_COLORS: Record<BookingStatus, Swatch> = {
   PAID: { bg: "#15803D", fg: "#ffffff", soft: "#DCFCE7" }, // green
   HERE_UNPAID: { bg: "#FACC15", fg: "#1c1917", soft: "#FEF9C3" }, // yellow (dark text for contrast)
-  BOOKED_FIXED: { bg: "#DC2626", fg: "#ffffff", soft: "#FEE2E2" }, // red
-  BOOKED_MOVABLE: { bg: "#EA580C", fg: "#ffffff", soft: "#FFEDD5" }, // orange
+  BOOKED_FIXED: { bg: "#EA580C", fg: "#ffffff", soft: "#FFEDD5" }, // orange — upcoming, must stay on this parcel
+  BOOKED_MOVABLE: { bg: "#DB2777", fg: "#ffffff", soft: "#FCE7F3" }, // pink — upcoming, movable
 };
 
 // Legend / picker order.

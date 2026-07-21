@@ -125,8 +125,8 @@ export default function Dashboard({
   }
 
   // Calendar drag: move a booking to a new parcel/date, preserving nights. Conflicts are rejected by the server.
-  async function moveBooking(b: BookingDTO, parcelId: string, arrival: string, departure: string) {
-    await api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, parcelId, arrival, departure }));
+  function moveBooking(b: BookingDTO, parcelId: string, arrival: string, departure: string): Promise<boolean> {
+    return api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, parcelId, arrival, departure }));
   }
 
   const actions: ManageActions & {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   pointerWithin,
@@ -110,7 +110,7 @@ export default function CalendarView({
   };
   onEdit: (b: BookingDTO) => void;
   onCreate: (parcelId: string, date: string) => void;
-  onMove: (b: BookingDTO, parcelId: string, arrival: string, departure: string) => void;
+  onMove: (b: BookingDTO, parcelId: string, arrival: string, departure: string) => Promise<boolean>;
 }) {
   const [start, setStart] = useState(addDays(today, -6));
   const DAYS = 21,
@@ -119,12 +119,16 @@ export default function CalendarView({
     LABEL = 92;
   const days = Array.from({ length: DAYS }, (_, i) => addDays(start, i));
 
+  // Local copy so a drag moves the bar instantly (optimistic); re-synced when server data changes.
+  const [localBookings, setLocalBookings] = useState(bookings);
+  useEffect(() => setLocalBookings(bookings), [bookings]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
   );
 
-  function handleDragEnd(e: DragEndEvent) {
+  async function handleDragEnd(e: DragEndEvent) {
     const b = e.active.data.current?.booking as BookingDTO | undefined;
     const cell = e.over?.data.current as { parcelId: string; date: string } | undefined;
     if (!b || !cell) return;
@@ -132,12 +136,16 @@ export default function CalendarView({
     const arrival = cell.date;
     const departure = addDays(arrival, nights);
     if (cell.parcelId === b.parcelId && arrival === b.arrival) return; // no change
-    onMove(b, cell.parcelId, arrival, departure);
+
+    // Move the bar immediately, then persist; revert only if the server rejects it (conflict).
+    setLocalBookings((prev) => prev.map((x) => (x.id === b.id ? { ...x, parcelId: cell.parcelId, arrival, departure } : x)));
+    const ok = await onMove(b, cell.parcelId, arrival, departure);
+    if (!ok) setLocalBookings((prev) => prev.map((x) => (x.id === b.id ? b : x)));
   }
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="sticky top-0 z-30 bg-stone-100 flex flex-wrap items-center gap-2 mb-3 pt-1 pb-2">
         <div className="flex gap-1.5">
           <button onClick={() => setStart(addDays(start, -7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.prevWeek}
@@ -154,29 +162,12 @@ export default function CalendarView({
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-3">
-        {/* legend — horizontal wrap on mobile, left column on desktop */}
-        <div className="lg:w-52 lg:shrink-0 border border-stone-200 rounded-lg bg-white p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">{L.legendTitle}</div>
-          <ul className="flex flex-row flex-wrap lg:flex-col gap-x-4 gap-y-2">
-            {statusMeta(L).map((m) => (
-              <li key={m.status} className="flex items-start gap-2">
-                <span className="w-3 h-3 rounded-full mt-0.5 shrink-0" style={{ background: m.color.bg }} />
-                <div className="leading-tight">
-                  <div className="text-xs font-medium text-stone-700">{m.label}</div>
-                  <div className="hidden lg:block text-[11px] text-stone-400">{m.desc}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="min-w-0 flex-1 overflow-x-auto border border-stone-200 rounded-lg bg-white">
+      <div className="overflow-auto border border-stone-200 rounded-lg bg-white max-h-[calc(100vh-9rem)]">
           <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
             <div style={{ width: LABEL + DAYS * W, minWidth: LABEL + DAYS * W }}>
               {/* header */}
-              <div className="flex sticky top-0 bg-white border-b border-stone-200 z-10">
-                <div style={{ width: LABEL }} className="shrink-0 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-r border-stone-200 bg-white sticky left-0 z-20">
+              <div className="flex sticky top-0 bg-white border-b border-stone-200 z-20">
+                <div style={{ width: LABEL }} className="shrink-0 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-r border-stone-200 bg-white sticky left-0 z-30">
                   {L.colParcel}
                 </div>
                 {days.map((d) => {
@@ -211,7 +202,7 @@ export default function CalendarView({
                   {parcels
                     .filter((p) => p.typeId === type.id)
                     .map((p) => {
-                      const rowBookings = bookings.filter((b) => b.parcelId === p.id && b.arrival < days[DAYS - 1] && b.departure > days[0]);
+                      const rowBookings = localBookings.filter((b) => b.parcelId === p.id && b.arrival < days[DAYS - 1] && b.departure > days[0]);
                       return (
                         <div key={p.id} className="flex border-b border-stone-100 relative" style={{ height: ROW }}>
                           <div style={{ width: LABEL }} className="shrink-0 px-2 flex items-center gap-1.5 border-r border-stone-200 bg-white sticky left-0 z-10">
@@ -254,7 +245,22 @@ export default function CalendarView({
               ))}
             </div>
           </DndContext>
-        </div>
+      </div>
+
+      {/* status legend at the bottom so the calendar can use full width */}
+      <div className="mt-3 border border-stone-200 rounded-lg bg-white p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">{L.legendTitle}</div>
+        <ul className="flex flex-row flex-wrap gap-x-6 gap-y-2">
+          {statusMeta(L).map((m) => (
+            <li key={m.status} className="flex items-start gap-2">
+              <span className="w-3 h-3 rounded-full mt-0.5 shrink-0" style={{ background: m.color.bg }} />
+              <div className="leading-tight">
+                <div className="text-xs font-medium text-stone-700">{m.label}</div>
+                <div className="text-[11px] text-stone-400">{m.desc}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
       <p className="mt-2 text-xs text-stone-400">{L.calHelp}</p>
     </div>
