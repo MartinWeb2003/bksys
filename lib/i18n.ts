@@ -15,7 +15,9 @@ const en = {
   tab_manage: "Parcels",
   weekd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   prevWeek: "← week",
+  prevDay: "← Yesterday",
   today: "Today",
+  nextDay: "Tomorrow →",
   nextWeek: "week →",
   colParcel: "Parcel",
   calHelp:
@@ -149,7 +151,9 @@ const hr: Strings = {
   tab_manage: "Parcele",
   weekd: ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"],
   prevWeek: "← tjedan",
+  prevDay: "← Jučer",
   today: "Danas",
+  nextDay: "Sutra →",
   nextWeek: "tjedan →",
   colParcel: "Parcela",
   calHelp:

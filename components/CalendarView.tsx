@@ -150,8 +150,14 @@ export default function CalendarView({
           <button onClick={() => setStart(addDays(start, -7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.prevWeek}
           </button>
+          <button onClick={() => setStart(addDays(start, -1))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
+            {L.prevDay}
+          </button>
           <button onClick={() => setStart(addDays(today, -6))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.today}
+          </button>
+          <button onClick={() => setStart(addDays(start, 1))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
+            {L.nextDay}
           </button>
           <button onClick={() => setStart(addDays(start, 7))} className="px-2.5 py-1 rounded border border-stone-300 bg-white text-sm hover:bg-stone-50 whitespace-nowrap">
             {L.nextWeek}
