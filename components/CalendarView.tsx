@@ -113,7 +113,7 @@ export default function CalendarView({
   onMove: (b: BookingDTO, parcelId: string, arrival: string, departure: string) => Promise<boolean>;
 }) {
   const [start, setStart] = useState(addDays(today, -6));
-  const DAYS = 21,
+  const DAYS = 23,
     W = 46,
     ROW = 40,
     LABEL = 92;
