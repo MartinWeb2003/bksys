@@ -207,7 +207,7 @@ export default function Dashboard({
         </div>
       </header>
 
-      <main className={(view === "list" ? "max-w-none" : "max-w-6xl") + " mx-auto px-4 py-5"}>
+      <main className={(view === "list" ? "max-w-none" : view === "calendar" ? "max-w-7xl" : "max-w-6xl") + " mx-auto px-4 py-5"}>
         {view === "calendar" && (
           <CalendarView
             bookings={confirmedBookings}

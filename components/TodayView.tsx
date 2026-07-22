@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDate } from "@/lib/dates";
+import { addDays, formatDate } from "@/lib/dates";
 import { colorForStatus } from "@/lib/colors";
 import type { BookingDTO } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
@@ -18,8 +18,11 @@ export default function TodayView({
   labelOf: (parcelId: string) => string;
   onEdit: (b: BookingDTO) => void;
 }) {
+  const tomorrow = addDays(today, 1);
   const arrivals = bookings.filter((b) => b.arrival === today);
   const departures = bookings.filter((b) => b.departure === today);
+  const arrivalsTomorrow = bookings.filter((b) => b.arrival === tomorrow);
+  const departuresTomorrow = bookings.filter((b) => b.departure === tomorrow);
 
   const Card = ({ b, kind }: { b: BookingDTO; kind: "in" | "out" }) => {
     const c = colorForStatus(b.status);
@@ -44,23 +47,52 @@ export default function TodayView({
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-5">
-      <section>
-        <h2 className="text-sm font-bold uppercase tracking-wider text-teal-800 mb-2.5">
-          {L.arrivingToday} · {arrivals.length}
-        </h2>
-        <div className="space-y-2">
-          {arrivals.length ? arrivals.map((b) => <Card key={b.id} b={b} kind="in" />) : <p className="text-sm text-stone-400">{L.noArrivals}</p>}
-        </div>
-      </section>
-      <section>
-        <h2 className="text-sm font-bold uppercase tracking-wider text-orange-800 mb-2.5">
-          {L.departingToday} · {departures.length}
-        </h2>
-        <div className="space-y-2">
-          {departures.length ? departures.map((b) => <Card key={b.id} b={b} kind="out" />) : <p className="text-sm text-stone-400">{L.noDepartures}</p>}
-        </div>
-      </section>
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-5">
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-teal-800 mb-2.5">
+            {L.arrivingToday} · {arrivals.length}
+          </h2>
+          <div className="space-y-2">
+            {arrivals.length ? arrivals.map((b) => <Card key={b.id} b={b} kind="in" />) : <p className="text-sm text-stone-400">{L.noArrivals}</p>}
+          </div>
+        </section>
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-orange-800 mb-2.5">
+            {L.departingToday} · {departures.length}
+          </h2>
+          <div className="space-y-2">
+            {departures.length ? departures.map((b) => <Card key={b.id} b={b} kind="out" />) : <p className="text-sm text-stone-400">{L.noDepartures}</p>}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-5 pt-5 border-t border-stone-200">
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-teal-800/70 mb-2.5">
+            {L.arrivingTomorrow} · {arrivalsTomorrow.length}
+          </h2>
+          <div className="space-y-2">
+            {arrivalsTomorrow.length ? (
+              arrivalsTomorrow.map((b) => <Card key={b.id} b={b} kind="in" />)
+            ) : (
+              <p className="text-sm text-stone-400">{L.noArrivalsTomorrow}</p>
+            )}
+          </div>
+        </section>
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-orange-800/70 mb-2.5">
+            {L.departingTomorrow} · {departuresTomorrow.length}
+          </h2>
+          <div className="space-y-2">
+            {departuresTomorrow.length ? (
+              departuresTomorrow.map((b) => <Card key={b.id} b={b} kind="out" />)
+            ) : (
+              <p className="text-sm text-stone-400">{L.noDeparturesTomorrow}</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
