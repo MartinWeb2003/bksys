@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { nightsBetween, formatDate } from "@/lib/dates";
-import { colorForStatus } from "@/lib/colors";
+import { nightsBetween, formatDate, todayISO } from "@/lib/dates";
+import { colorForStatus, statusMeta } from "@/lib/colors";
 import type { BookingDTO } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
 
@@ -18,23 +18,88 @@ export default function ListView({
   onEdit: (b: BookingDTO) => void;
 }) {
   const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
   const rows = bookings
     .filter((b) =>
       (b.guestName + (b.email ?? "") + (b.phone ?? "") + labelOf(b.parcelId)).toLowerCase().includes(q.toLowerCase()),
     )
     .sort((a, b) => a.arrival.localeCompare(b.arrival));
 
+  const statusLabel = Object.fromEntries(statusMeta(L).map((m) => [m.status, m.label])) as Record<string, string>;
+
+  function downloadCsv() {
+    // Export bookings whose arrival falls in the chosen range (empty = no bound).
+    const picked = bookings
+      .filter((b) => (!from || b.arrival >= from) && (!to || b.arrival <= to))
+      .sort((a, b) => a.arrival.localeCompare(b.arrival));
+
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const header = [L.colParcel, L.colGuest, L.colArrival, L.colDeparture, L.colNights, L.colPeople, L.colStatus, L.email, L.phone, L.colReserved, L.colNotes];
+    const lines = [
+      header.map(esc).join(","),
+      ...picked.map((b) =>
+        [
+          labelOf(b.parcelId),
+          b.guestName,
+          formatDate(b.arrival),
+          formatDate(b.departure),
+          nightsBetween(b.arrival, b.departure),
+          b.people,
+          statusLabel[b.status] ?? b.status,
+          b.email ?? "",
+          b.phone ?? "",
+          formatDate(b.createdAt),
+          b.notes ?? "",
+        ]
+          .map(esc)
+          .join(","),
+      ),
+    ];
+    // BOM so Croatian characters render correctly in Excel.
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rezervacije_${from || "sve"}_${to || "sve"}_${todayISO()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-stone-500 border-b border-stone-200 whitespace-nowrap";
   const td = "px-3 py-2 border-b border-stone-100 whitespace-nowrap";
+  const dateInp = "border border-stone-300 rounded px-2.5 py-1.5 text-sm bg-white";
+  const dateLbl = "block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1";
 
   return (
     <div>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={L.searchPh}
-        className="mb-3 w-full max-w-sm border border-stone-300 rounded px-3 py-1.5 text-sm bg-white"
-      />
+      <div className="mb-3 flex flex-wrap items-end gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={L.searchPh}
+          className="w-full max-w-sm border border-stone-300 rounded px-3 py-1.5 text-sm bg-white"
+        />
+        <div className="ml-auto flex flex-wrap items-end gap-2">
+          <div>
+            <label className={dateLbl}>{L.dlFrom}</label>
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={dateInp} />
+          </div>
+          <div>
+            <label className={dateLbl}>{L.dlTo}</label>
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={dateInp} />
+          </div>
+          <button
+            onClick={downloadCsv}
+            className="px-3 py-1.5 rounded bg-cyan-800 text-white text-sm font-medium hover:bg-cyan-900 whitespace-nowrap"
+          >
+            {L.download}
+          </button>
+        </div>
+      </div>
       <div className="overflow-x-auto border border-stone-200 rounded-lg bg-white">
         <table className="w-full text-sm">
           <thead>
