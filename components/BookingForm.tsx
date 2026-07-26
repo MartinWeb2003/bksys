@@ -145,15 +145,18 @@ export default function BookingForm({
     setF({ ...f, [k]: e.target.value });
 
   const nights = f.arrival && f.departure ? nightsBetween(f.arrival, f.departure) : 0;
+  // A clash is only counted against CONFIRMED bookings — tentative ones don't hold a slot.
   const conflict = useMemo(() => {
     if (!f.parcelId || !f.arrival || !f.departure || nights <= 0) return null;
     return (
       bookings.find(
-        (b) => b.id !== f.id && b.parcelId === f.parcelId && overlaps(f.arrival, f.departure, b.arrival, b.departure),
+        (b) => b.id !== f.id && b.confirmed && b.parcelId === f.parcelId && overlaps(f.arrival, f.departure, b.arrival, b.departure),
       ) || null
     );
   }, [f, bookings, nights]);
-  const valid = f.guestName.trim() && f.parcelId && nights > 0 && !conflict;
+  // A conflict blocks saving only for a CONFIRMED booking; a tentative one may be saved (with a warning).
+  const blocking = !!conflict && f.confirmed;
+  const valid = f.guestName.trim() && f.parcelId && nights > 0 && !blocking;
 
   async function submit() {
     setBusy(true);
@@ -231,9 +234,14 @@ export default function BookingForm({
           </div>
           <div className="col-span-2 text-xs text-stone-500 -mt-1">
             {nights > 0 ? L.nights(nights) : L.mustAfter}
-            {conflict && (
+            {conflict && f.confirmed && (
               <span className="block mt-1 text-red-700 font-medium">
                 {L.conflict(conflict.guestName, labelOf(f.parcelId), formatDate(conflict.arrival), formatDate(conflict.departure))}
+              </span>
+            )}
+            {conflict && !f.confirmed && (
+              <span className="block mt-1 text-amber-700 font-medium">
+                {L.conflictWarn(conflict.guestName, labelOf(f.parcelId), formatDate(conflict.arrival), formatDate(conflict.departure))}
               </span>
             )}
             {saveError && <span className="block mt-1 text-red-700 font-medium">{L.saveFailed}</span>}

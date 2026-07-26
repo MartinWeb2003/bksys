@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
-import { createCampWithDefaults, findCampByEmail } from "@/lib/data";
+import { createCamp, findCampByEmail } from "@/lib/data";
 import { hashPassword } from "@/lib/password";
 import { apiError } from "@/lib/apiError";
 import { rateLimit, clientIp, rateLimited } from "@/lib/rateLimit";
@@ -20,10 +20,11 @@ export async function POST(req: Request) {
     if (await findCampByEmail(emailNorm)) return NextResponse.json({ error: "email_taken" }, { status: 409 });
 
     const passwordHash = await hashPassword(String(password));
-    const camp = await createCampWithDefaults(String(name).trim(), emailNorm, passwordHash);
+    const camp = await createCamp(String(name).trim(), emailNorm, passwordHash);
 
     const token = await createSession(camp.id);
-    const res = NextResponse.json({ ok: true }, { status: 201 });
+    // needsOnboarding tells the client to route to /onboarding instead of the dashboard.
+    const res = NextResponse.json({ ok: true, needsOnboarding: true }, { status: 201 });
     res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
     return res;
   } catch (e) {

@@ -19,6 +19,14 @@ export type BookingDTO = {
   createdAt: string; // "YYYY-MM-DD"
 };
 
+export type NoteDTO = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+};
+
 export type TypeVM = { id: string; name: string; order: number };
 
 export type ParcelVM = {

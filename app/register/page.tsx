@@ -25,7 +25,7 @@ export default function RegisterPage() {
       body: JSON.stringify({ name, email, password }),
     });
     if (res.ok) {
-      router.replace("/");
+      router.replace("/onboarding");
       router.refresh();
       return;
     }

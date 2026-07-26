@@ -2,42 +2,55 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, todayISO, formatDate } from "@/lib/dates";
-import { STR, DEFAULT_LANG, type Lang } from "@/lib/i18n";
-import type { BookingDTO, ParcelVM, TypeVM } from "@/lib/types";
+import { addDays, todayISO, formatDate, overlaps } from "@/lib/dates";
+import { makeStrings, DEFAULT_LANG, type Lang } from "@/lib/i18n";
+import type { UnitNoun } from "@/lib/vocab";
+import type { BookingDTO, NoteDTO, ParcelVM, TypeVM } from "@/lib/types";
 import CalendarView from "./CalendarView";
 import TodayView from "./TodayView";
 import AvailabilityView from "./AvailabilityView";
 import ListView from "./ListView";
 import UnconfirmedView from "./UnconfirmedView";
+import NotesView, { type NoteActions } from "./NotesView";
 import ManageView, { type ManageActions } from "./ManageView";
 import BookingForm, { type BookingFormState } from "./BookingForm";
 
-type View = "calendar" | "today" | "availability" | "list" | "unconfirmed" | "manage";
+type View = "calendar" | "today" | "availability" | "list" | "unconfirmed" | "notes" | "manage";
 
 export default function Dashboard({
   initialBookings,
   initialParcels,
   initialTypes,
+  initialNotes,
+  unitNoun,
 }: {
   initialBookings: BookingDTO[];
   initialParcels: ParcelVM[];
   initialTypes: TypeVM[];
+  initialNotes: NoteDTO[];
+  unitNoun: UnitNoun;
 }) {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG);
   const [view, setView] = useState<View>("calendar");
   const [modal, setModal] = useState<BookingFormState | null>(null);
-  const L = STR[lang];
+  // Dictionary is relabeled with the camp's unit noun (parcel/apartment/room/…).
+  const L = useMemo(() => makeStrings(lang, unitNoun), [lang, unitNoun]);
 
   // Data comes straight from server props; mutations call router.refresh() to re-read.
   const bookings = initialBookings;
   const parcels = initialParcels;
   const types = initialTypes;
+  const notes = initialNotes;
 
   // Confirmed bookings live on the calendar/lists; unconfirmed (tentative) ones only on Nepotvrđeno.
   const confirmedBookings = useMemo(() => bookings.filter((b) => b.confirmed), [bookings]);
   const unconfirmedBookings = useMemo(() => bookings.filter((b) => !b.confirmed), [bookings]);
+
+  // A tentative booking's clash (if any) is measured only against CONFIRMED bookings — those are
+  // the ones that hold a slot. Used to warn on the Unconfirmed list and block confirming.
+  const conflictFor = (b: BookingDTO): BookingDTO | null =>
+    confirmedBookings.find((c) => c.id !== b.id && c.parcelId === b.parcelId && overlaps(b.arrival, b.departure, c.arrival, c.departure)) ?? null;
 
   const today = useMemo(() => todayISO(), []);
   const labelById = useMemo(() => new Map(parcels.map((p) => [p.id, p.label])), [parcels]);
@@ -118,11 +131,20 @@ export default function Dashboard({
     setModal(null);
   }
 
-  // One-click confirm from the Nepotvrđeno list; if it conflicts, open the editor to fix.
+  // One-click confirm from the Nepotvrđeno list. A tentative booking that clashes with a confirmed
+  // one may NOT be confirmed — the list disables the button, and the server re-checks as a backstop.
+  // If the server still rejects (race), open the editor so the clash can be resolved.
   async function confirmBooking(b: BookingDTO) {
+    if (conflictFor(b)) return;
     const ok = await api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, confirmed: true }));
     if (!ok) setModal(toForm(b));
   }
+
+  const noteActions: NoteActions = {
+    createNote: (title, body) => api("/api/notes", "POST", { title, body }),
+    updateNote: (id, title, body) => api(`/api/notes/${id}`, "PATCH", { title, body }),
+    deleteNote: (id) => api(`/api/notes/${id}`, "DELETE"),
+  };
 
   // Calendar drag: move a booking to a new parcel/date, preserving nights. Conflicts are rejected by the server.
   function moveBooking(b: BookingDTO, parcelId: string, arrival: string, departure: string): Promise<boolean> {
@@ -156,6 +178,7 @@ export default function Dashboard({
     ["availability", L.tab_availability],
     ["list", L.tab_list],
     ["unconfirmed", L.tab_unconfirmed],
+    ["notes", L.tab_notes],
     ["manage", L.tab_manage],
   ];
 
@@ -231,11 +254,13 @@ export default function Dashboard({
             bookings={unconfirmedBookings}
             L={L}
             labelOf={labelOf}
+            conflictFor={conflictFor}
             onEdit={onEdit}
             onConfirm={confirmBooking}
             onCreate={() => setModal(blank("", today, "", false))}
           />
         )}
+        {view === "notes" && <NotesView notes={notes} L={L} lang={lang} actions={noteActions} />}
         {view === "manage" && <ManageView types={types} parcels={parcels} bookings={bookings} L={L} actions={actions} />}
       </main>
 

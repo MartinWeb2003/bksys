@@ -1,6 +1,8 @@
 // UI string dictionary. Croatian is the default; English is the alternate.
 // No i18n framework, just typed maps. Guest data/notes are never translated.
 
+import { type UnitNoun, nounForms } from "./vocab";
+
 export type Lang = "hr" | "en";
 
 const en = {
@@ -104,7 +106,7 @@ const en = {
   loginTitle: "Camp desk",
   loginSubtitle: "Log in to your camp",
   registerSubtitle: "Create your camp account",
-  campNameLbl: "Camp name",
+  campNameLbl: "Property name",
   passwordLbl: "Password",
   loginButton: "Log in",
   registerButton: "Create account",
@@ -141,6 +143,29 @@ const en = {
   noUnconfirmed: "No tentative reservations.",
   unconfirmedHelp:
     "Tentative reservations you're not sure about yet. They don't show on the calendar and don't block availability. Confirm one to move it onto the calendar.",
+  onbTitle: "Set up your workspace",
+  onbSubtitle: (name: string) => `Welcome, ${name}. Let's tailor the dashboard to what you run.`,
+  onbPrompt: "What will you be managing?",
+  onbHint: "Pick everything that applies — each becomes its own group you can rename or extend later.",
+  onbCountLabel: "How many?",
+  onbCreate: "Create my dashboard",
+  onbCreating: "Creating…",
+  onbPickOne: "Select at least one to continue",
+  onbError: "Setup failed, please try again.",
+  onbUnitsPreview: (labels: string) => `Creates ${labels}`,
+  tab_notes: "Notes",
+  notesHelp: "Free-form notes for your property — reminders, to-dos, anything. Private to you.",
+  noteTitlePh: "Title (optional)",
+  notePlaceholder: "Write a note…",
+  addNote: "Add note",
+  noteSave: "Save",
+  noteEdit: "Edit",
+  noteDelete: "Delete",
+  noNotes: "No notes yet.",
+  noteUpdated: (d: string) => `Updated ${d}`,
+  conflictWarn: (name: string, parcel: string, a: string, d: string) =>
+    `Heads up: overlaps ${name} on ${parcel} (${a} – ${d}). You can save this as tentative, but resolve the clash before confirming.`,
+  cantConfirmConflict: "Has a conflict — resolve it before confirming",
 };
 
 export type Strings = typeof en;
@@ -246,7 +271,7 @@ const hr: Strings = {
   loginTitle: "Camp desk",
   loginSubtitle: "Prijavite se u svoj kamp",
   registerSubtitle: "Otvorite račun za kamp",
-  campNameLbl: "Naziv kampa",
+  campNameLbl: "Naziv objekta",
   passwordLbl: "Lozinka",
   loginButton: "Prijava",
   registerButton: "Otvori račun",
@@ -283,7 +308,82 @@ const hr: Strings = {
   noUnconfirmed: "Nema nepotvrđenih rezervacija.",
   unconfirmedHelp:
     "Nepotvrđene rezervacije u koje još niste sigurni. Ne prikazuju se na kalendaru i ne zauzimaju termine. Potvrdite ih da ih prebacite na kalendar.",
+  onbTitle: "Postavite svoj prostor",
+  onbSubtitle: (name) => `Dobrodošli, ${name}. Prilagodimo ploču onome čime upravljate.`,
+  onbPrompt: "Čime ćete upravljati?",
+  onbHint: "Odaberite sve što vrijedi — svako postaje zasebna skupina koju kasnije možete preimenovati ili proširiti.",
+  onbCountLabel: "Koliko ih imate?",
+  onbCreate: "Izradi moju ploču",
+  onbCreating: "Izrada…",
+  onbPickOne: "Odaberite barem jedno za nastavak",
+  onbError: "Postavljanje nije uspjelo, pokušajte ponovno.",
+  onbUnitsPreview: (labels) => `Stvara ${labels}`,
+  tab_notes: "Bilješke",
+  notesHelp: "Slobodne bilješke za vaš objekt — podsjetnici, zadaci, bilo što. Vidljivo samo vama.",
+  noteTitlePh: "Naslov (neobavezno)",
+  notePlaceholder: "Napišite bilješku…",
+  addNote: "Dodaj bilješku",
+  noteSave: "Spremi",
+  noteEdit: "Uredi",
+  noteDelete: "Obriši",
+  noNotes: "Još nema bilješki.",
+  noteUpdated: (d) => `Ažurirano ${d}`,
+  conflictWarn: (name, parcel, a, d) =>
+    `Napomena: preklapa se s ${name} na ${parcel} (${a} – ${d}). Možete spremiti kao nepotvrđeno, ali riješite preklapanje prije potvrde.`,
+  cantConfirmConflict: "Ima preklapanje — riješite prije potvrde",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };
 export const DEFAULT_LANG: Lang = "hr";
+
+// ---------- per-tenant relabeling ----------
+// A camp picks what it manages during onboarding; the resolved unit noun (parcel/apartment/
+// room/…) relabels the "Parcel" vocabulary across the whole dashboard. The base dictionary
+// above is the "parcel" wording, so a camp on the default noun sees identical text — this
+// keeps existing (campsite) accounts unchanged. Only non-parcel nouns get the overrides below.
+
+/** Build the string dictionary for a language with the given unit noun substituted in.
+ *  Returns the untouched base dictionary for "parcel" so nothing changes for camps. */
+export function makeStrings(lang: Lang, unit: UnitNoun): Strings {
+  const base = STR[lang];
+  if (unit === "parcel") return base; // identical to today — existing camps are untouched
+  const { one, oneCap, manyCap } = nounForms(unit, lang);
+
+  // Overrides shared by both languages (noun stands alone → grammatical everywhere).
+  const shared: Partial<Strings> = {
+    colParcel: oneCap,
+    parcel: oneCap,
+    tab_manage: manyCap,
+    manageParcelsTitle: manyCap,
+  };
+
+  const perLang: Partial<Strings> =
+    lang === "en"
+      ? {
+          parcelType: `${oneCap} type`,
+          manageTypesTitle: `${oneCap} types`,
+          addParcel: `Add ${one}`,
+          parcelSearchPh: `Search ${one} or type…`,
+          searchPh: `Search name, contact, ${one}…`,
+          cantRemoveType: `Remove its ${nounForms(unit, lang).many} first`,
+          st_fixed_desc: `Not arrived yet; must stay on this ${one}`,
+          st_movable_desc: `Not paid/arrived; can be moved to another ${one}`,
+          calHelp:
+            `Bars run from midday of arrival to midday of departure, so a departure and a new arrival can share the same date on one ${one}. Click an empty cell to add a booking there.`,
+        }
+      : {
+          // Croatian: nominative-friendly phrasing so any noun stays grammatical.
+          parcelType: `Tip: ${oneCap}`,
+          manageTypesTitle: `Tipovi: ${manyCap}`,
+          addParcel: `+ ${oneCap}`,
+          parcelSearchPh: `Pretraga: ${one} ili tip…`,
+          searchPh: `Pretraga: ime, kontakt, ${one}…`,
+          cantRemoveType: "Prvo uklonite sve iz ovog tipa",
+          st_fixed_desc: "Još nije stigao; mora ostati na ovom mjestu",
+          st_movable_desc: "Nije plaćeno/stiglo; može se premjestiti drugamo",
+          calHelp:
+            "Trake idu od podneva dolaska do podneva odlaska, pa odlazak i novi dolazak mogu dijeliti isti datum. Kliknite prazno polje za novu rezervaciju.",
+        };
+
+  return { ...base, ...shared, ...perLang };
+}

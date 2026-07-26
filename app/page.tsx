@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { listBookings, listParcels, listParcelTypes } from "@/lib/data";
+import { getCampProfile, listBookings, listNotes, listParcels, listParcelTypes } from "@/lib/data";
 import { currentCampId } from "@/lib/session";
 import Dashboard from "@/components/Dashboard";
 import type { ParcelVM, TypeVM } from "@/lib/types";
@@ -11,7 +11,16 @@ export default async function Page() {
   const campId = await currentCampId();
   if (!campId) redirect("/login");
 
-  const [bookings, parcels, types] = await Promise.all([listBookings(campId), listParcels(campId), listParcelTypes(campId)]);
+  // New camps must finish onboarding before reaching the dashboard.
+  const profile = await getCampProfile(campId);
+  if (!profile.onboardedAt) redirect("/onboarding");
+
+  const [bookings, parcels, types, notes] = await Promise.all([
+    listBookings(campId),
+    listParcels(campId),
+    listParcelTypes(campId),
+    listNotes(campId),
+  ]);
 
   const typeVMs: TypeVM[] = types.map((t) => ({ id: t.id, name: t.name, order: t.order }));
   const parcelVMs: ParcelVM[] = parcels.map((p) => ({
@@ -23,5 +32,7 @@ export default async function Page() {
     order: p.order,
   }));
 
-  return <Dashboard initialBookings={bookings} initialParcels={parcelVMs} initialTypes={typeVMs} />;
+  return (
+    <Dashboard initialBookings={bookings} initialParcels={parcelVMs} initialTypes={typeVMs} initialNotes={notes} unitNoun={profile.unitNoun} />
+  );
 }

@@ -18,10 +18,26 @@ model Camp {
   email        String          @unique                // login identity
   passwordHash String                                 // bcrypt hash — never plaintext
   createdAt    DateTime        @default(now())
+  onboardedAt  DateTime?                              // null = must run onboarding; existing camps backfilled to createdAt
+  unitNoun     String          @default("parcel")     // app-wide noun key (parcel/apartment/room/…) — drives UI relabeling
+  businessKinds String         @default("camp")       // comma-joined onboarding choices (record of what they manage)
   types        ParcelType[]
   parcels      Parcel[]
   bookings     Booking[]
   resets       PasswordReset[]
+  notes        Note[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  campId    String
+  camp      Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  title     String   @default("")     // optional short label
+  body      String   @db.Text         // the note text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campId])
 }
 
 model PasswordReset {

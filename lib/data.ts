@@ -5,7 +5,9 @@ import crypto from "crypto";
 import { prisma } from "./prisma";
 import { overlaps, fromDbDate, toDbDate } from "./dates";
 import { DEFAULT_TYPES, DEFAULT_PARCELS } from "./defaults";
-import type { BookingDTO, BookingStatus } from "./types";
+import { type BusinessKindKey, type UnitNoun, kindByKey, resolveUnitNoun } from "./vocab";
+import type { Lang } from "./i18n";
+import type { BookingDTO, BookingStatus, NoteDTO } from "./types";
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -48,11 +50,83 @@ export class ConflictError extends Error {
 }
 export class InUseError extends Error {}
 export class NotFoundError extends Error {}
+export class AlreadyOnboardedError extends Error {}
+export class InvalidOnboardingError extends Error {}
 
 // ---------- camps / auth ----------
 
 export function findCampByEmail(email: string) {
   return prisma.camp.findUnique({ where: { email: email.toLowerCase() } });
+}
+
+/** Create a camp with NO layout, pending onboarding (onboardedAt stays null).
+ *  The first-login onboarding flow generates the types/parcels via completeOnboarding. */
+export function createCamp(name: string, email: string, passwordHash: string) {
+  return prisma.camp.create({ data: { name, email: email.toLowerCase(), passwordHash } });
+}
+
+/** Onboarding status + resolved vocabulary for a camp. Drives the /onboarding gate and
+ *  the app-wide relabeling (unitNoun). */
+export async function getCampProfile(campId: string) {
+  const camp = await prisma.camp.findUnique({
+    where: { id: campId },
+    select: { name: true, onboardedAt: true, unitNoun: true, businessKinds: true },
+  });
+  if (!camp) throw new NotFoundError("Camp not found.");
+  return {
+    name: camp.name,
+    onboardedAt: camp.onboardedAt,
+    unitNoun: camp.unitNoun as UnitNoun,
+    businessKinds: camp.businessKinds,
+  };
+}
+
+export type OnboardingSelection = { kind: BusinessKindKey; count: number; capacity: number };
+
+const MAX_UNITS_PER_KIND = 300;
+
+/** Complete first-login onboarding: turn the admin's chosen business kinds + counts into
+ *  ParcelTypes and Parcels, and record the resolved unit noun. Idempotency is enforced —
+ *  a camp that is already onboarded is rejected. Runs atomically. */
+export async function completeOnboarding(campId: string, selections: OnboardingSelection[], lang: Lang) {
+  const clean = selections.filter((s) => kindByKey(s.kind) && s.count > 0);
+  if (clean.length === 0) throw new InvalidOnboardingError("Pick at least one thing to manage.");
+  // Dedupe kinds — each kind maps to exactly one ParcelType.
+  const seen = new Set<string>();
+  for (const s of clean) {
+    if (seen.has(s.kind)) throw new InvalidOnboardingError("Duplicate category.");
+    seen.add(s.kind);
+    if (s.count > MAX_UNITS_PER_KIND) throw new InvalidOnboardingError(`At most ${MAX_UNITS_PER_KIND} per category.`);
+    if (!(s.capacity > 0)) throw new InvalidOnboardingError("Capacity must be at least 1.");
+  }
+
+  const kinds = clean.map((s) => s.kind);
+
+  return prisma.$transaction(async (tx) => {
+    // Guard: only a not-yet-onboarded camp may run this (prevents double-seeding).
+    const camp = await tx.camp.findUnique({ where: { id: campId }, select: { onboardedAt: true } });
+    if (!camp) throw new NotFoundError("Camp not found.");
+    if (camp.onboardedAt) throw new AlreadyOnboardedError("Camp is already set up.");
+
+    let parcelOrder = 0;
+    for (let i = 0; i < clean.length; i++) {
+      const sel = clean[i];
+      const kind = kindByKey(sel.kind)!;
+      const type = await tx.parcelType.create({
+        data: { campId, name: kind.typeName[lang], order: i },
+      });
+      for (let n = 1; n <= sel.count; n++) {
+        await tx.parcel.create({
+          data: { campId, label: `${kind.labelPrefix}${n}`, typeId: type.id, capacity: sel.capacity, order: parcelOrder++ },
+        });
+      }
+    }
+
+    await tx.camp.update({
+      where: { id: campId },
+      data: { unitNoun: resolveUnitNoun(kinds), businessKinds: kinds.join(","), onboardedAt: new Date() },
+    });
+  });
 }
 
 /** Create a camp and seed it with the default parcel layout, atomically. */
@@ -272,4 +346,47 @@ export async function reorderParcels(campId: string, ids: string[]) {
   const owned = await prisma.parcel.findMany({ where: { campId, id: { in: ids } }, select: { id: true } });
   if (owned.length !== ids.length) throw new NotFoundError("Parcel not found.");
   await prisma.$transaction(ids.map((id, i) => prisma.parcel.update({ where: { id }, data: { order: i } })));
+}
+
+// ---------- notes (all scoped by campId) ----------
+
+const toNoteDTO = (n: { id: string; title: string; body: string; createdAt: Date; updatedAt: Date }): NoteDTO => ({
+  id: n.id,
+  title: n.title,
+  body: n.body,
+  createdAt: n.createdAt.toISOString(),
+  updatedAt: n.updatedAt.toISOString(),
+});
+
+async function ownNote(campId: string, id: string) {
+  const n = await prisma.note.findFirst({ where: { id, campId } });
+  if (!n) throw new NotFoundError("Note not found.");
+  return n;
+}
+
+function validateNote(title: string, body: string) {
+  if (!title.trim() && !body.trim()) throw new Error("Note cannot be empty.");
+}
+
+export async function listNotes(campId: string): Promise<NoteDTO[]> {
+  const rows = await prisma.note.findMany({ where: { campId }, orderBy: { updatedAt: "desc" } });
+  return rows.map(toNoteDTO);
+}
+
+export async function createNote(campId: string, title: string, body: string): Promise<NoteDTO> {
+  validateNote(title, body);
+  const row = await prisma.note.create({ data: { campId, title: title.trim(), body } });
+  return toNoteDTO(row);
+}
+
+export async function updateNote(campId: string, id: string, title: string, body: string): Promise<NoteDTO> {
+  validateNote(title, body);
+  await ownNote(campId, id);
+  const row = await prisma.note.update({ where: { id }, data: { title: title.trim(), body } });
+  return toNoteDTO(row);
+}
+
+export async function deleteNote(campId: string, id: string): Promise<void> {
+  await ownNote(campId, id);
+  await prisma.note.delete({ where: { id } });
 }
