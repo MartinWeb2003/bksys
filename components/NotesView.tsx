@@ -54,8 +54,6 @@ export default function NotesView({
 
   return (
     <div>
-      <KeyGrid initial={keyGrid} L={L} />
-
       <p className="text-xs text-stone-500 mb-3 max-w-xl">{L.notesHelp}</p>
 
       {/* Composer */}
@@ -116,6 +114,10 @@ export default function NotesView({
           )}
         </div>
       )}
+
+      <div className="mt-6">
+        <KeyGrid initial={keyGrid} L={L} />
+      </div>
     </div>
   );
 }
