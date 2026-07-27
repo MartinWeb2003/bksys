@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { addDays, todayISO, formatDate, overlaps } from "@/lib/dates";
 import { makeStrings, DEFAULT_LANG, type Lang } from "@/lib/i18n";
 import type { UnitNoun } from "@/lib/vocab";
-import type { BookingDTO, NoteDTO, ParcelVM, TypeVM } from "@/lib/types";
+import type { BookingDTO, NoteDTO, KeyGridData, ParcelVM, TypeVM } from "@/lib/types";
 import CalendarView from "./CalendarView";
 import TodayView from "./TodayView";
 import AvailabilityView from "./AvailabilityView";
@@ -22,12 +22,14 @@ export default function Dashboard({
   initialParcels,
   initialTypes,
   initialNotes,
+  initialKeyGrid,
   unitNoun,
 }: {
   initialBookings: BookingDTO[];
   initialParcels: ParcelVM[];
   initialTypes: TypeVM[];
   initialNotes: NoteDTO[];
+  initialKeyGrid: KeyGridData | null;
   unitNoun: UnitNoun;
 }) {
   const router = useRouter();
@@ -260,7 +262,7 @@ export default function Dashboard({
             onCreate={() => setModal(blank("", today, "", false))}
           />
         )}
-        {view === "notes" && <NotesView notes={notes} L={L} lang={lang} actions={noteActions} />}
+        {view === "notes" && <NotesView notes={notes} keyGrid={initialKeyGrid} L={L} lang={lang} actions={noteActions} />}
         {view === "manage" && <ManageView types={types} parcels={parcels} bookings={bookings} L={L} actions={actions} />}
       </main>
 

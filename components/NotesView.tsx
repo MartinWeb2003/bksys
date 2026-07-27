@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { NoteDTO } from "@/lib/types";
+import type { NoteDTO, KeyGridData } from "@/lib/types";
 import type { Strings, Lang } from "@/lib/i18n";
+import KeyGrid from "./KeyGrid";
 
 export type NoteActions = {
   createNote: (title: string, body: string) => Promise<boolean>;
@@ -21,11 +22,13 @@ const fmt = (iso: string, lang: Lang) =>
 
 export default function NotesView({
   notes,
+  keyGrid,
   L,
   lang,
   actions,
 }: {
   notes: NoteDTO[];
+  keyGrid: KeyGridData | null;
   L: Strings;
   lang: Lang;
   actions: NoteActions;
@@ -51,6 +54,8 @@ export default function NotesView({
 
   return (
     <div>
+      <KeyGrid initial={keyGrid} L={L} />
+
       <p className="text-xs text-stone-500 mb-3 max-w-xl">{L.notesHelp}</p>
 
       {/* Composer */}

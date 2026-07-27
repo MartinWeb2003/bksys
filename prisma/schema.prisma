@@ -26,6 +26,18 @@ model Camp {
   bookings     Booking[]
   resets       PasswordReset[]
   notes        Note[]
+  keyGrid      KeyGrid?
+}
+
+// A per-camp "key tracker" on the Notes page: independent columns (e.g. F = fridge keys,
+// A = adapters), each a list of slots where the admin notes which parcel the item went to.
+// Stored as one JSON blob per camp — flexible column count / lengths, edited client-side.
+model KeyGrid {
+  id        String   @id @default(cuid())
+  campId    String   @unique
+  camp      Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  data      Json                          // { enabled: boolean, columns: [{ id, label, cells: [{ name, value }] }] }
+  updatedAt DateTime @updatedAt
 }
 
 model Note {

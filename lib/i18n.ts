@@ -166,6 +166,16 @@ const en = {
   conflictWarn: (name: string, parcel: string, a: string, d: string) =>
     `Heads up: overlaps ${name} on ${parcel} (${a} – ${d}). You can save this as tentative, but resolve the clash before confirming.`,
   cantConfirmConflict: "Has a conflict — resolve it before confirming",
+  keyTrackerTitle: "Key tracker",
+  keyTrackerHelp: "Track which parcel each item was handed to. Each column is an item (F = fridge keys, A = adapters). Type the parcel in a slot; leave empty if not given out.",
+  keyAddColumn: "+ Column",
+  keyAddRow: "+ Slot",
+  keyRemoveColumn: "Remove column",
+  keyRemoveRow: "Remove last slot",
+  keyColLabelPh: "Label",
+  keyColItems: (n: number) => `${n} item${n === 1 ? "" : "s"}`,
+  keyRowNamePh: "Name",
+  keyToggle: "Show key tracker",
 };
 
 export type Strings = typeof en;
@@ -331,6 +341,16 @@ const hr: Strings = {
   conflictWarn: (name, parcel, a, d) =>
     `Napomena: preklapa se s ${name} na ${parcel} (${a} – ${d}). Možete spremiti kao nepotvrđeno, ali riješite preklapanje prije potvrde.`,
   cantConfirmConflict: "Ima preklapanje — riješite prije potvrde",
+  keyTrackerTitle: "Evidencija ključeva",
+  keyTrackerHelp: "Bilježite kojoj ste parceli predali koji predmet. Svaki stupac je predmet (F = ključevi hladnjaka, A = adapteri). Upišite parcelu u polje; ostavite prazno ako nije izdano.",
+  keyAddColumn: "+ Stupac",
+  keyAddRow: "+ Mjesto",
+  keyRemoveColumn: "Ukloni stupac",
+  keyRemoveRow: "Ukloni zadnje mjesto",
+  keyColLabelPh: "Oznaka",
+  keyColItems: (n) => `${n} ${n === 1 ? "komad" : "kom."}`,
+  keyRowNamePh: "Naziv",
+  keyToggle: "Prikaži evidenciju ključeva",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };

@@ -27,6 +27,12 @@ export type NoteDTO = {
   updatedAt: string; // ISO timestamp
 };
 
+// The Notes-page key tracker. Each column (e.g. "F"/"A") holds a list of slots; each slot has
+// an editable name (default "F1", "A1"…) and the parcel it was handed to ("" = not given out).
+export type KeyCell = { name: string; value: string };
+export type KeyColumn = { id: string; label: string; cells: KeyCell[] };
+export type KeyGridData = { enabled: boolean; columns: KeyColumn[] };
+
 export type TypeVM = { id: string; name: string; order: number };
 
 export type ParcelVM = {

@@ -7,7 +7,7 @@ import { overlaps, fromDbDate, toDbDate } from "./dates";
 import { DEFAULT_TYPES, DEFAULT_PARCELS } from "./defaults";
 import { type BusinessKindKey, type UnitNoun, kindByKey, resolveUnitNoun } from "./vocab";
 import type { Lang } from "./i18n";
-import type { BookingDTO, BookingStatus, NoteDTO } from "./types";
+import type { BookingDTO, BookingStatus, NoteDTO, KeyColumn, KeyGridData } from "./types";
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -389,4 +389,48 @@ export async function updateNote(campId: string, id: string, title: string, body
 export async function deleteNote(campId: string, id: string): Promise<void> {
   await ownNote(campId, id);
   await prisma.note.delete({ where: { id } });
+}
+
+// ---------- key tracker (one JSON grid per camp) ----------
+
+const MAX_KEY_COLUMNS = 50;
+const MAX_KEY_CELLS = 500;
+
+/** Sanitize untrusted grid JSON into a bounded, well-typed shape before it is stored/returned. */
+function cleanKeyColumns(input: unknown): KeyColumn[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, MAX_KEY_COLUMNS).map((c) => {
+    const col = (c ?? {}) as { id?: unknown; label?: unknown; cells?: unknown };
+    const cells = Array.isArray(col.cells) ? col.cells : [];
+    return {
+      id: String(col.id ?? crypto.randomUUID()),
+      label: String(col.label ?? "").slice(0, 40),
+      cells: cells.slice(0, MAX_KEY_CELLS).map((x) => {
+        const cell = (x ?? {}) as { name?: unknown; value?: unknown };
+        return { name: String(cell.name ?? "").slice(0, 80), value: String(cell.value ?? "").slice(0, 200) };
+      }),
+    };
+  });
+}
+
+function cleanKeyGrid(input: unknown): KeyGridData {
+  const g = (input ?? {}) as { enabled?: unknown; columns?: unknown };
+  return { enabled: g.enabled !== false, columns: cleanKeyColumns(g.columns) }; // default enabled = true
+}
+
+/** The camp's key-tracker grid, or null if it has never saved one (UI then seeds defaults). */
+export async function getKeyGrid(campId: string): Promise<KeyGridData | null> {
+  const row = await prisma.keyGrid.findUnique({ where: { campId } });
+  return row ? cleanKeyGrid(row.data) : null;
+}
+
+/** Replace the camp's whole key-tracker grid. */
+export async function saveKeyGrid(campId: string, input: unknown): Promise<KeyGridData> {
+  const clean = cleanKeyGrid(input);
+  await prisma.keyGrid.upsert({
+    where: { campId },
+    create: { campId, data: clean },
+    update: { data: clean },
+  });
+  return clean;
 }
