@@ -7,7 +7,7 @@ import { overlaps, fromDbDate, toDbDate } from "./dates";
 import { DEFAULT_TYPES, DEFAULT_PARCELS } from "./defaults";
 import { type BusinessKindKey, type UnitNoun, kindByKey, resolveUnitNoun } from "./vocab";
 import type { Lang } from "./i18n";
-import type { BookingDTO, BookingStatus, NoteDTO, KeyColumn, KeyGridData } from "./types";
+import type { BookingDTO, BookingStatus, NoteDTO, KeyColumn, KeyGridData, EvisitorDTO } from "./types";
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -433,4 +433,71 @@ export async function saveKeyGrid(campId: string, input: unknown): Promise<KeyGr
     update: { data: clean },
   });
   return clean;
+}
+
+// ---------- e-Visitor entries (all scoped by campId) ----------
+
+const toEvisitorDTO = (e: {
+  id: string;
+  parcelId: string;
+  adults: number;
+  c1218: number;
+  c512: number;
+  c05: number;
+  departure: Date;
+}): EvisitorDTO => ({
+  id: e.id,
+  parcelId: e.parcelId,
+  adults: e.adults,
+  c1218: e.c1218,
+  c512: e.c512,
+  c05: e.c05,
+  departure: fromDbDate(e.departure),
+});
+
+export type EvisitorInput = { parcelId: string; adults: number; c1218: number; c512: number; c05: number; departure: string };
+
+function normEvisitor(input: EvisitorInput) {
+  const n = (v: number) => Math.max(0, Math.floor(Number(v) || 0));
+  const counts = { adults: n(input.adults), c1218: n(input.c1218), c512: n(input.c512), c05: n(input.c05) };
+  if (!input.parcelId) throw new Error("Accommodation is required.");
+  if (!input.departure) throw new Error("Departure date is required.");
+  if (counts.adults + counts.c1218 + counts.c512 + counts.c05 < 1) throw new Error("At least one guest is required.");
+  return counts;
+}
+
+async function ownEvisitor(campId: string, id: string) {
+  const e = await prisma.evisitorEntry.findFirst({ where: { id, campId } });
+  if (!e) throw new NotFoundError("Entry not found.");
+  return e;
+}
+
+export async function listEvisitor(campId: string): Promise<EvisitorDTO[]> {
+  const rows = await prisma.evisitorEntry.findMany({ where: { campId }, orderBy: { departure: "asc" } });
+  return rows.map(toEvisitorDTO);
+}
+
+export async function createEvisitor(campId: string, input: EvisitorInput): Promise<EvisitorDTO> {
+  const counts = normEvisitor(input);
+  await ownParcel(campId, input.parcelId);
+  const row = await prisma.evisitorEntry.create({
+    data: { campId, parcelId: input.parcelId, ...counts, departure: toDbDate(input.departure) },
+  });
+  return toEvisitorDTO(row);
+}
+
+export async function updateEvisitor(campId: string, id: string, input: EvisitorInput): Promise<EvisitorDTO> {
+  const counts = normEvisitor(input);
+  await ownEvisitor(campId, id);
+  await ownParcel(campId, input.parcelId);
+  const row = await prisma.evisitorEntry.update({
+    where: { id },
+    data: { parcelId: input.parcelId, ...counts, departure: toDbDate(input.departure) },
+  });
+  return toEvisitorDTO(row);
+}
+
+export async function deleteEvisitor(campId: string, id: string): Promise<void> {
+  await ownEvisitor(campId, id);
+  await prisma.evisitorEntry.delete({ where: { id } });
 }

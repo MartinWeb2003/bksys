@@ -27,6 +27,26 @@ model Camp {
   resets       PasswordReset[]
   notes        Note[]
   keyGrid      KeyGrid?
+  evisitor     EvisitorEntry[]
+}
+
+// Current-state guest registration for e-Visitor reporting: who is on which parcel and when
+// they leave, broken down by the age bands e-Visitor uses. Ephemeral (deleted as guests leave).
+model EvisitorEntry {
+  id        String   @id @default(cuid())
+  campId    String
+  camp      Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  parcelId  String
+  parcel    Parcel   @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  adults    Int      @default(0) // 18+
+  c1218     Int      @default(0) // children 12–18
+  c512      Int      @default(0) // children 5–12
+  c05       Int      @default(0) // children under 5
+  departure DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([campId])
+  @@index([parcelId])
 }
 
 // A per-camp "key tracker" on the Notes page: independent columns (e.g. F = fridge keys,
@@ -86,6 +106,7 @@ model Parcel {
   capacity Int
   order    Int        @default(0)
   bookings Booking[]
+  evisitor EvisitorEntry[]
 
   @@unique([campId, label]) // unique per camp
   @@index([campId])

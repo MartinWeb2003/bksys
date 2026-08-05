@@ -33,6 +33,17 @@ export type KeyCell = { name: string; value: string };
 export type KeyColumn = { id: string; label: string; cells: KeyCell[] };
 export type KeyGridData = { enabled: boolean; columns: KeyColumn[] };
 
+// One e-Visitor current-state row: guests on a parcel, by age band, with their departure date.
+export type EvisitorDTO = {
+  id: string;
+  parcelId: string;
+  adults: number; // 18+
+  c1218: number; // 12–18
+  c512: number; // 5–12
+  c05: number; // under 5
+  departure: string; // "YYYY-MM-DD"
+};
+
 export type TypeVM = { id: string; name: string; order: number };
 
 export type ParcelVM = {

@@ -176,6 +176,19 @@ const en = {
   keyColItems: (n: number) => `${n} item${n === 1 ? "" : "s"}`,
   keyRowNamePh: "Name",
   keyToggle: "Show key tracker",
+  tab_evisitor: "E-visitor",
+  evHelp: "Current guests on site for e-Visitor. Red = leaving today, yellow = leaving tomorrow.",
+  evAdults: "18+",
+  evC1218: "12–18",
+  evC512: "5–12",
+  evC05: "0–5",
+  evDeparture: "Departure",
+  evAddGuests: "+ new guests",
+  evEdit: "Edit",
+  evNewTitle: "New guests",
+  evEditTitle: "Edit guests",
+  evNoRows: "No entries yet.",
+  evAction: "Edit / delete",
 };
 
 export type Strings = typeof en;
@@ -351,6 +364,19 @@ const hr: Strings = {
   keyColItems: (n) => `${n} ${n === 1 ? "komad" : "kom."}`,
   keyRowNamePh: "Naziv",
   keyToggle: "Prikaži evidenciju ključeva",
+  tab_evisitor: "E-visitor",
+  evHelp: "Trenutni gosti na terenu za e-Visitor. Crveno = odlazi danas, žuto = odlazi sutra.",
+  evAdults: "18+",
+  evC1218: "12–18",
+  evC512: "5–12",
+  evC05: "0–5",
+  evDeparture: "Datum odlaska",
+  evAddGuests: "+ novi gosti",
+  evEdit: "Izmjeni",
+  evNewTitle: "Novi gosti",
+  evEditTitle: "Uredi goste",
+  evNoRows: "Još nema unosa.",
+  evAction: "Izmjeni / obriši",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };

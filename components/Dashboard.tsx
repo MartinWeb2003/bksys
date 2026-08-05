@@ -5,17 +5,19 @@ import { useRouter } from "next/navigation";
 import { addDays, todayISO, formatDate, overlaps } from "@/lib/dates";
 import { makeStrings, DEFAULT_LANG, type Lang } from "@/lib/i18n";
 import type { UnitNoun } from "@/lib/vocab";
-import type { BookingDTO, NoteDTO, KeyGridData, ParcelVM, TypeVM } from "@/lib/types";
+import type { BookingDTO, NoteDTO, KeyGridData, EvisitorDTO, ParcelVM, TypeVM } from "@/lib/types";
 import CalendarView from "./CalendarView";
 import TodayView from "./TodayView";
 import AvailabilityView from "./AvailabilityView";
 import ListView from "./ListView";
 import UnconfirmedView from "./UnconfirmedView";
 import NotesView, { type NoteActions } from "./NotesView";
+import EvisitorView from "./EvisitorView";
+import EvisitorForm, { type EvisitorFormState } from "./EvisitorForm";
 import ManageView, { type ManageActions } from "./ManageView";
 import BookingForm, { type BookingFormState } from "./BookingForm";
 
-type View = "calendar" | "today" | "availability" | "list" | "unconfirmed" | "notes" | "manage";
+type View = "calendar" | "today" | "availability" | "list" | "unconfirmed" | "notes" | "evisitor" | "manage";
 
 export default function Dashboard({
   initialBookings,
@@ -23,6 +25,7 @@ export default function Dashboard({
   initialTypes,
   initialNotes,
   initialKeyGrid,
+  initialEvisitor,
   unitNoun,
 }: {
   initialBookings: BookingDTO[];
@@ -30,12 +33,14 @@ export default function Dashboard({
   initialTypes: TypeVM[];
   initialNotes: NoteDTO[];
   initialKeyGrid: KeyGridData | null;
+  initialEvisitor: EvisitorDTO[];
   unitNoun: UnitNoun;
 }) {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG);
   const [view, setView] = useState<View>("calendar");
   const [modal, setModal] = useState<BookingFormState | null>(null);
+  const [evModal, setEvModal] = useState<EvisitorFormState | null>(null);
   // Dictionary is relabeled with the camp's unit noun (parcel/apartment/room/…).
   const L = useMemo(() => makeStrings(lang, unitNoun), [lang, unitNoun]);
 
@@ -44,6 +49,7 @@ export default function Dashboard({
   const parcels = initialParcels;
   const types = initialTypes;
   const notes = initialNotes;
+  const evisitor = initialEvisitor;
 
   // Confirmed bookings live on the calendar/lists; unconfirmed (tentative) ones only on Nepotvrđeno.
   const confirmedBookings = useMemo(() => bookings.filter((b) => b.confirmed), [bookings]);
@@ -148,6 +154,36 @@ export default function Dashboard({
     deleteNote: (id) => api(`/api/notes/${id}`, "DELETE"),
   };
 
+  // ----- e-Visitor -----
+  const blankEv = (): EvisitorFormState => ({ id: null, parcelId: "", adults: 2, c1218: 0, c512: 0, c05: 0, departure: today });
+  const toEvForm = (e: EvisitorDTO): EvisitorFormState => ({
+    id: e.id,
+    parcelId: e.parcelId,
+    adults: e.adults,
+    c1218: e.c1218,
+    c512: e.c512,
+    c05: e.c05,
+    departure: e.departure,
+  });
+  const evPayload = (f: EvisitorFormState) => ({
+    parcelId: f.parcelId,
+    adults: f.adults,
+    c1218: f.c1218,
+    c512: f.c512,
+    c05: f.c05,
+    departure: f.departure,
+  });
+
+  async function saveEvisitor(f: EvisitorFormState): Promise<boolean> {
+    const ok = await api(f.id ? `/api/evisitor/${f.id}` : "/api/evisitor", f.id ? "PATCH" : "POST", evPayload(f));
+    if (ok) setEvModal(null);
+    return ok;
+  }
+  async function deleteEvisitorEntry(id: string) {
+    await api(`/api/evisitor/${id}`, "DELETE");
+    setEvModal(null);
+  }
+
   // Calendar drag: move a booking to a new parcel/date, preserving nights. Conflicts are rejected by the server.
   function moveBooking(b: BookingDTO, parcelId: string, arrival: string, departure: string): Promise<boolean> {
     return api(`/api/bookings/${b.id}`, "PATCH", payloadOf({ ...b, parcelId, arrival, departure }));
@@ -181,6 +217,7 @@ export default function Dashboard({
     ["list", L.tab_list],
     ["unconfirmed", L.tab_unconfirmed],
     ["notes", L.tab_notes],
+    ["evisitor", L.tab_evisitor],
     ["manage", L.tab_manage],
   ];
 
@@ -263,6 +300,17 @@ export default function Dashboard({
           />
         )}
         {view === "notes" && <NotesView notes={notes} keyGrid={initialKeyGrid} L={L} lang={lang} actions={noteActions} />}
+        {view === "evisitor" && (
+          <EvisitorView
+            entries={evisitor}
+            L={L}
+            today={today}
+            labelOf={labelOf}
+            onEdit={(e) => setEvModal(toEvForm(e))}
+            onDelete={deleteEvisitorEntry}
+            onCreate={() => setEvModal(blankEv())}
+          />
+        )}
         {view === "manage" && <ManageView types={types} parcels={parcels} bookings={bookings} L={L} actions={actions} />}
       </main>
 
@@ -276,6 +324,17 @@ export default function Dashboard({
           onSave={saveBooking}
           onDelete={deleteBooking}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {evModal && (
+        <EvisitorForm
+          initial={evModal}
+          parcels={parcels}
+          L={L}
+          onSave={saveEvisitor}
+          onDelete={deleteEvisitorEntry}
+          onClose={() => setEvModal(null)}
         />
       )}
     </div>

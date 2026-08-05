@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCampProfile, getKeyGrid, listBookings, listNotes, listParcels, listParcelTypes } from "@/lib/data";
+import { getCampProfile, getKeyGrid, listBookings, listEvisitor, listNotes, listParcels, listParcelTypes } from "@/lib/data";
 import { currentCampId } from "@/lib/session";
 import Dashboard from "@/components/Dashboard";
 import type { ParcelVM, TypeVM } from "@/lib/types";
@@ -15,12 +15,13 @@ export default async function Page() {
   const profile = await getCampProfile(campId);
   if (!profile.onboardedAt) redirect("/onboarding");
 
-  const [bookings, parcels, types, notes, keyGrid] = await Promise.all([
+  const [bookings, parcels, types, notes, keyGrid, evisitor] = await Promise.all([
     listBookings(campId),
     listParcels(campId),
     listParcelTypes(campId),
     listNotes(campId),
     getKeyGrid(campId),
+    listEvisitor(campId),
   ]);
 
   const typeVMs: TypeVM[] = types.map((t) => ({ id: t.id, name: t.name, order: t.order }));
@@ -40,6 +41,7 @@ export default async function Page() {
       initialTypes={typeVMs}
       initialNotes={notes}
       initialKeyGrid={keyGrid}
+      initialEvisitor={evisitor}
       unitNoun={profile.unitNoun}
     />
   );
