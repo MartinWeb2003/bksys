@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { addDays, formatDate } from "@/lib/dates";
 import type { EvisitorDTO } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
+import ConfirmDialog from "./ConfirmDialog";
 
 export default function EvisitorView({
   entries,
@@ -21,6 +23,7 @@ export default function EvisitorView({
   onDelete: (id: string) => void;
   onCreate: () => void;
 }) {
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
   const tomorrow = addDays(today, 1);
   const rows = [...entries].sort((a, b) => a.departure.localeCompare(b.departure));
 
@@ -79,7 +82,7 @@ export default function EvisitorView({
                         {L.evEdit}
                       </button>
                       <span className="text-stone-300 mx-1.5">/</span>
-                      <button onClick={() => onDelete(e.id)} className="text-xs font-medium text-red-700 hover:underline">
+                      <button onClick={() => setConfirmDelId(e.id)} className="text-xs font-medium text-red-700 hover:underline">
                         {L.noteDelete}
                       </button>
                     </td>
@@ -97,6 +100,21 @@ export default function EvisitorView({
       >
         {L.evAddGuests}
       </button>
+
+      {confirmDelId && (
+        <ConfirmDialog
+          message={L.evConfirmDelete}
+          confirmLabel={L.noteDelete}
+          danger
+          L={L}
+          onConfirm={() => {
+            const id = confirmDelId;
+            setConfirmDelId(null);
+            onDelete(id);
+          }}
+          onCancel={() => setConfirmDelId(null)}
+        />
+      )}
     </div>
   );
 }

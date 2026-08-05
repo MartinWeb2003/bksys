@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ParcelVM } from "@/lib/types";
 import type { Strings } from "@/lib/i18n";
+import ConfirmDialog from "./ConfirmDialog";
 
 export type EvisitorFormState = {
   id: string | null;
@@ -97,6 +98,7 @@ export default function EvisitorForm({
   const [f, setF] = useState<EvisitorFormState>(initial);
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [confirm, setConfirm] = useState<{ message: string; label: string; danger?: boolean; run: () => void } | null>(null);
 
   const total = f.adults + f.c1218 + f.c512 + f.c05;
   const valid = !!f.parcelId && !!f.departure && total >= 1;
@@ -153,7 +155,10 @@ export default function EvisitorForm({
         </div>
         <div className="px-5 py-3.5 border-t border-stone-200 flex justify-between">
           {f.id ? (
-            <button onClick={() => onDelete(f.id!)} className="text-sm text-red-700 hover:underline">
+            <button
+              onClick={() => setConfirm({ message: L.evConfirmDelete, label: L.noteDelete, danger: true, run: () => onDelete(f.id!) })}
+              className="text-sm text-red-700 hover:underline"
+            >
               {L.noteDelete}
             </button>
           ) : (
@@ -165,7 +170,7 @@ export default function EvisitorForm({
             </button>
             <button
               disabled={!valid || busy}
-              onClick={submit}
+              onClick={() => setConfirm({ message: L.evConfirmSave, label: L.noteSave, run: submit })}
               className="px-4 py-1.5 text-sm rounded bg-cyan-800 text-white font-medium hover:bg-cyan-900 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {L.noteSave}
@@ -173,6 +178,21 @@ export default function EvisitorForm({
           </div>
         </div>
       </div>
+
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          confirmLabel={confirm.label}
+          danger={confirm.danger}
+          L={L}
+          onConfirm={() => {
+            const run = confirm.run;
+            setConfirm(null);
+            run();
+          }}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }

@@ -191,6 +191,9 @@ const en = {
   evAction: "Edit / delete",
   evSummary: (parcels: number, people: number) =>
     `${parcels} ${parcels === 1 ? "parcel" : "parcels"} · ${people} ${people === 1 ? "guest" : "guests"}`,
+  evConfirmSave: "Save these changes?",
+  evConfirmDelete: "Delete this entry? This can't be undone.",
+  confirmYes: "Yes",
 };
 
 export type Strings = typeof en;
@@ -381,6 +384,9 @@ const hr: Strings = {
   evAction: "Izmjeni / obriši",
   evSummary: (parcels, people) =>
     `${parcels} ${parcels === 1 ? "parcela" : "parcele"} · ${people} ${people === 1 ? "gost" : "gostiju"}`,
+  evConfirmSave: "Spremiti ove promjene?",
+  evConfirmDelete: "Obrisati ovaj unos? Ovo se ne može poništiti.",
+  confirmYes: "Da",
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };
