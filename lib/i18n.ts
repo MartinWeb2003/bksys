@@ -189,6 +189,8 @@ const en = {
   evEditTitle: "Edit guests",
   evNoRows: "No entries yet.",
   evAction: "Edit / delete",
+  evSummary: (parcels: number, people: number) =>
+    `${parcels} ${parcels === 1 ? "parcel" : "parcels"} · ${people} ${people === 1 ? "guest" : "guests"}`,
 };
 
 export type Strings = typeof en;
@@ -377,6 +379,8 @@ const hr: Strings = {
   evEditTitle: "Uredi goste",
   evNoRows: "Još nema unosa.",
   evAction: "Izmjeni / obriši",
+  evSummary: (parcels, people) =>
+    `${parcels} ${parcels === 1 ? "parcela" : "parcele"} · ${people} ${people === 1 ? "gost" : "gostiju"}`,
 };
 
 export const STR: Record<Lang, Strings> = { hr, en };
