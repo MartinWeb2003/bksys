@@ -218,7 +218,7 @@ export default function CalendarView({
                           {days.map((d) => (
                             <DroppableCell key={d} parcelId={p.id} date={d} today={today} width={W} onCreate={onCreate} />
                           ))}
-                          {/* booking bars — midday of arrival to midday of departure; draggable except red (fixed) */}
+                          {/* booking bars — midday of arrival to midday of departure; only pink (movable) bars can be dragged */}
                           {rowBookings.map((b) => {
                             const c = colorForStatus(b.status);
                             const startIdx = nightsBetween(days[0], b.arrival);
@@ -232,7 +232,7 @@ export default function CalendarView({
                                 key={b.id}
                                 b={b}
                                 color={c}
-                                draggable={b.status !== "BOOKED_FIXED"}
+                                draggable={b.status === "BOOKED_MOVABLE"}
                                 onEdit={onEdit}
                                 style={{ left: clipL, width: clipR - clipL, top: 6, height: ROW - 12 }}
                               />
